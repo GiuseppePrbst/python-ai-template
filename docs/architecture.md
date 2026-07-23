@@ -135,6 +135,52 @@ ADR-008 para las alternativas consideradas.
   queda cualquier patrón `{{...}}` sin sustituir, el generador falla sin
   crear el destino final.
 
+## Pipeline de validación reproducible (CI/local)
+
+La verificación del repositorio se ejecuta con el mismo contrato en local y
+en CI. Los detalles viven en `.github/workflows/ci.yml`, ADR-011 y
+`tools/ai/verify*.py`.
+
+- **Contrato común local/CI.** El orquestador `tools/ai/verify.py`
+  ejecuta los cuatro gates en orden (`ruff check`, `ruff format --check`,
+  `pyright`, `pytest`) usando solo biblioteca estándar, `subprocess.run`
+  con lista de argumentos (sin `shell=True`, sin `capture_output`), y se
+  detiene al primer fallo propagando su `exit code`. Es el comando que la
+  CI invoca y el atajo recomendado para uso local.
+- **Matriz `quality` en Python 3.12 y 3.14.** El job `quality` corre la
+  matriz en `ubuntu-latest` con `strategy.fail-fast: false`, de modo que
+  un fallo en una versión no cancela la otra y el diagnóstico queda
+  completo. Cada entrada de la matriz ejecuta `uv sync --locked` y
+  `uv run python tools/ai/verify.py`.
+- **Job `package` único dependiente.** El job `package` declara
+  `needs: quality`, no usa matriz, fija Python 3.12, ejecuta
+  `uv sync --locked`, `rm -rf dist`, `uv build` y
+  `uv run python tools/ai/verify_wheel.py`. Como solo corre si todas las
+  entradas de la matriz aprueban y no se duplica por versión de Python,
+  el build y el upload ocurren exactamente una vez por corrida.
+- **Artifact único.** El job `package` sube `dist/*.whl` y `dist/*.tar.gz`
+  con `actions/upload-artifact@v7.0.1`, `name: dist`,
+  `if-no-files-found: error` y `retention-days: 14`. No hay otros
+  pasos de upload en la pipeline.
+- **Verificación de versión y `package data`.** `tools/ai/verify_wheel.py`
+  cruza las cuatro fuentes de la versión: `project.version` de
+  `pyproject.toml` (vía `tomllib`), `__version__` de `__init__.py`
+  (extracción estática vía `ast`, sin importar ni ejecutar el módulo),
+  el nombre del wheel y `METADATA Version`. Falla si alguna no coincide.
+  Después exige la presencia exacta de los cinco recursos obligatorios de
+  la plantilla (`python_ai_template/template/.gitignore`,
+  `python_ai_template/template/.opencode/.gitignore`,
+  `python_ai_template/template/pyproject.toml.tmpl`,
+  `python_ai_template/template/src/__package_name__/__init__.py.tmpl`,
+  `python_ai_template/template/tests/test_smoke.py.tmpl`). No se
+  publica a PyPI ni se crean GitHub Releases desde esta pipeline.
+- **Actions fijadas por SHA.** Las tres Actions usadas
+  (`actions/checkout`, `astral-sh/setup-uv`, `actions/upload-artifact`)
+  van ancladas a un SHA completo de 40 caracteres, con el tag como
+  comentario, para evitar resurfacing silencioso frente a tags
+  inmutables reasignados. Los SHAs concretos viven en
+  `.github/workflows/ci.yml`.
+
 ## Dependencias
 
 - **Runtime del paquete `python-ai-template`**: ninguna. El paquete y el

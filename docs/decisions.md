@@ -193,3 +193,46 @@ Las decisiones no se modifican silenciosamente. Una corrección se hace añadien
   - `docs/architecture.md`, `docs/glossary.md` y `README.md` se actualizan para reflejar la nueva forma de uso y la division entre shim local y console script.
   - El wheel construido se inspecciona con `unzip -l` (o equivalente) y debe listar al menos: `python_ai_template/template/.gitignore`, `python_ai_template/template/.opencode/.gitignore`, `python_ai_template/template/pyproject.toml.tmpl`, `python_ai_template/template/src/__package_name__/__init__.py.tmpl` y `python_ai_template/template/tests/test_smoke.py.tmpl`.
 - **Reversibilidad**: media. Revertir requiere: borrar `src/`, restaurar `template/` al nivel raiz, restaurar `tools/new_project.py` con la implementacion anterior, eliminar `[project.scripts]` y restaurar `[tool.uv] package = false` en `pyproject.toml`. La logica de generacion en si misma no cambia, por lo que el historial git permite recuperar la fase 3 sin perdida.
+
+## ADR-011: hardening operativo con scripts locales y CI reproducible
+
+- **Fecha**: 2026-07-23
+- **Estado**: aceptada.
+- **Contexto**: tras ADR-007 quedó establecida la obligatoriedad de los cuatro quality gates, pero su ejecución era manual y dispersa. `tools/new_project.py` y el paquete se habían vuelto construibles, pero no existía una forma automática y reproducible de (a) encadenar los gates en local con un solo comando que pare en el primer fallo, (b) verificar que el wheel producido contiene todos los recursos de la plantilla y que las cuatro fuentes de la versión están sincronizadas, y (c) ejecutar todo lo anterior en CI sobre cada push y cada pull request, en dos versiones de Python y con build + verificación + artifact únicos. Tampoco existía una política explícita sobre cómo fijar las Actions de GitHub para evitar resurfacing silencioso.
+- **Decisión**:
+  - **Scripts locales como contrato común local/CI.** Se introducen dos scripts en `tools/ai/`:
+    - `verify.py`: orquestador de los cuatro gates canónicos. Solo biblioteca estándar (`subprocess`, `sys`). Ejecuta cada gate con `subprocess.run` pasando una lista de argumentos, sin `shell=True`, sin `capture_output`, con salida en vivo. Imprime un encabezado y el comando de cada gate, se detiene al primer fallo y devuelve exactamente su `exit code` mediante `raise SystemExit(main())`. La CI lo invoca tal cual desde la raíz del repo con `uv run python tools/ai/verify.py`, y es el atajo canónico en local.
+    - `verify_wheel.py`: verificador del wheel. Solo biblioteca estándar (`ast`, `pathlib`, `tomllib`, `zipfile`, `sys`). Lee las cuatro fuentes de la versión y exige que coincidan entre sí:
+      1. `project.version` de `pyproject.toml` vía `tomllib`.
+      2. `__version__` de `src/python_ai_template/__init__.py` mediante extracción estática con `ast`, sin importar ni ejecutar el módulo. Rechaza cero o más de una asignación a `__version__` y exige que el valor sea un string literal.
+      3. Nombre del wheel: exige prefijo `python_ai_template-<project.version>-`.
+      4. `METADATA Version` dentro del wheel, exigiendo exactamente un `*.dist-info/METADATA`.
+      Además exige exactamente un `*.whl` en `dist/` y la presencia de los cinco recursos obligatorios de la plantilla.
+  - **Matriz `quality` en Python 3.12 y 3.14.** El job `quality` del workflow `.github/workflows/ci.yml` corre la matriz con `strategy.fail-fast: false`, sobre `ubuntu-latest`, ejecuta `uv sync --locked` y `uv run python tools/ai/verify.py`. `fail-fast: false` se eligió para no perder el diagnóstico de la otra versión cuando una falla.
+  - **Build y artifact en job único dependiente.** El job `package` declara `needs: quality`, no usa matriz y fija Python 3.12. Ejecuta `uv sync --locked`, `rm -rf dist`, `uv build`, `uv run python tools/ai/verify_wheel.py` y `actions/upload-artifact`. Como solo corre si **todas** las entradas de la matriz aprueban y el job no se replica por versión, el build y el upload ocurren exactamente una vez por corrida. El artifact se llama `dist`, contiene `dist/*.whl` y `dist/*.tar.gz`, usa `if-no-files-found: error` y `retention-days: 14`.
+  - **Actions fijadas por SHA completo.** Las tres Actions (`actions/checkout`, `astral-sh/setup-uv`, `actions/upload-artifact`) van ancladas al SHA completo de 40 caracteres con el tag como comentario:
+    - `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1`
+    - `astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0`
+    - `actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1`
+
+    El SHA se obtiene del release oficial correspondiente y se fija de manera inmutable; los tags se mantienen como comentario para legibilidad humana. No se publican paquetes ni se crean GitHub Releases desde la pipeline. No se añade `pre-commit` en esta fase.
+- **Alternativas consideradas**:
+  - **Ejecutar los cuatro gates directamente en CI sin orquestador local**: descartado por divergencia inevitable entre la ejecución local y la remota. El orquestador `verify.py` fija un único contrato que CI y local comparten.
+  - **`uv tool install` de un paquete externo con lógica similar**: descartado por añadir dependencia de runtime y por ir contra ADR-005 (`uv` canónico) y el principio de "sin dependencias de runtime" del paquete.
+  - **Importar `python_ai_template.__init__` para leer `__version__`**: descartado por ejecutar código del paquete durante la verificación, lo que abre la puerta a errores en el momento de import. Se eligió extracción estática con `ast` sobre el fichero leído como texto.
+  - **Reimplementar parsing PEP 427 del nombre del wheel con `packaging` o similar**: descartado por dependencia nueva. La forma del nombre se valida por prefijo y se reconstruye como `parts[1:-3]`, suficiente para el caso actual.
+  - **`fail-fast: true` en la matriz**: descartado por perder diagnóstico cuando una versión rompe. Mantener `fail-fast: false` informa de ambas a la vez, con un costo despreciable.
+  - **Build y artifact en cada entrada de la matriz**: descartado por duplicación innecesaria y por trabajo desperdiciado en una segunda corrida que ya tiene wheel.
+  - **Publicar a PyPI desde la pipeline**: descartado por scope. La pipeline no publica nada ni crea GitHub Releases. La instalación local sigue siendo manual mediante `uv tool install .`.
+  - **Anclar Actions por tag móvil (p. ej. `@v7`)** o por SHA abreviado: descartado por riesgo de resurfacing silencioso. Solo se acepta SHA completo de 40 caracteres con el tag como comentario.
+  - **Añadir `pre-commit` en esta fase**: pospuesto. No hay evidencia de fricción suficiente y mantiene el cambio acotado. Si en el futuro se justifica, se abordará en una ADR propia.
+- **Consecuencias**:
+  - El contrato local/CI es único: los cuatro gates se ejecutan con el mismo orquestador, en el mismo orden, con el mismo comportamiento ante fallos.
+  - El wheel se valida automáticamente en CI en cuanto a contenido (cinco recursos) y consistencia de versión (cuatro fuentes). Si el día de mañana una de esas fuentes se desincroniza, la CI lo bloquea antes del merge.
+  - El artifact `dist` queda disponible por corrida de CI durante 14 días, sin duplicarse por versión de Python.
+  - `tools/ai/__pycache__/` queda cubierto por la regla global `__pycache__/` del `.gitignore` raíz; no se añadió una entrada explícita.
+  - `pyproject.toml`, `uv.lock`, la lógica del generador, `AGENTS.md`, `docs/` previos y la configuración de OpenCode no se modificaron en esta fase. Tampoco se introdujo ninguna dependencia de runtime nueva.
+  - El paquete sigue sin dependencias de runtime. El script `verify_wheel.py` exige el `__init__.py` con una asignación simple a `__version__`; una asignación anotada futura (`__version__: str = "..."`) requeriría una actualización del script (esto queda registrado como tarea de prioridad baja en `docs/todos.md`).
+  - La pipeline no es canónica todavía para gobernanza: el job `quality` no aplica las ADR como gate ni bloquea merges sin aprobación humana. Queda como evolución natural, no como regresión.
+  - La política de Actions queda documentada en `docs/architecture.md` (sección "Pipeline de validación reproducible (CI/local)") y la badge de CI aparece en `README.md`. La trazabilidad de la decisión queda aquí.
+- **Reversibilidad**: fácil. Revertir requiere eliminar `.github/workflows/ci.yml`, eliminar `tools/ai/verify.py` y `tools/ai/verify_wheel.py`, y retirar las menciones en `README.md`, `AGENTS.md`, `.opencode/commands/verify.md` y `docs/architecture.md`. ADR-007 mantendría su vigencia (los cuatro gates siguen siendo obligatorios), pero la ergonomía local/CI perdería el orquestador y la verificación del wheel.

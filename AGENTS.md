@@ -26,6 +26,11 @@ uv run pyright
 uv run pytest
 ```
 
+El atajo canónico es `uv run python tools/ai/verify.py`, que invoca los
+cuatro comandos en el mismo orden con `subprocess.run`, se detiene al
+primer fallo y propaga su `exit code`. El contrato es idéntico en local
+y en CI (`.github/workflows/ci.yml`).
+
 Si alguno falla, el cambio **no** está terminado. Para cambios únicamente de documentación, basta con que los quality gates existentes continúen pasando sin nuevas regresiones.
 
 ## Definición de terminado
@@ -66,7 +71,7 @@ Un cambio se considera terminado solo si se cumplen **todas** estas condiciones:
 
 ## Comandos disponibles (`.opencode/commands/`)
 
-- `/verify`: ejecuta los cuatro quality gates.
+- `/verify`: ejecuta `uv run python tools/ai/verify.py` (los cuatro quality gates).
 - `/handoff`: deja `docs/current-state.md` listo para retomar.
 - `/decision`: registra una entrada en `docs/decisions.md`.
 - `/mistake`: registra un error recurrente en `docs/mistakes.md`.

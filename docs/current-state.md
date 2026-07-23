@@ -6,64 +6,78 @@ el trabajo sin la conversacion previa.
 
 ## Objetivo
 
-Convertir `python-ai-template` en un paquete instalable con src layout,
-distribuible via `uv tool install` y con un console script
-`new-python-project` ejecutable desde cualquier directorio.
+Incorporar CI reproducible y herramientas locales de verificacion al
+repositorio sin modificar el comportamiento del generador (hardening
+operativo v0.3.0).
 
 ## Estado
 
-- Repositorio migrado a src layout: `src/python_ai_template/`.
-- `template/` movido a `src/python_ai_template/template/` y accesible con
-  `importlib.resources.files("python_ai_template").joinpath("template")`.
-- Generador reorganizado en `python_ai_template.generator` y
-  `python_ai_template.cli`.
-- Console script `new-python-project = "python_ai_template.cli:main"`
-  registrado en `pyproject.toml`.
-- Shim local `tools/new_project.py` conserva `python3 tools/new_project.py
-  ...` para uso desde el checkout.
-- Tests: 33 casos aprobados (28 de regresion + 5 de `cli.main`:
-  `--version`, `--help`, generacion, argumentos faltantes, error de
-  validacion).
-- Wheel construido y verificado: contiene todos los archivos obligatorios
-  de la plantilla, incluidos `.gitignore` y `.opencode/.gitignore`.
-- `uv tool install .` deja `new-python-project` disponible en `PATH`.
-- E2E desde `/tmp` con un proyecto generado completo: pasa `uv sync`,
-  `ruff check`, `ruff format --check`, `pyright` y `pytest`.
-- Shim local validado manualmente con `--version` y `--help`.
-- `uv tool uninstall python-ai-template` deja el sistema limpio.
+- Repositorio en src layout, paquete `python-ai-template` version `0.2.2`.
+- `template/` vive dentro del paquete y se accede via `importlib.resources`.
+- Console script `new-python-project` registrado.
+- Tests: 33 casos aprobados.
+- Scripts locales nuevos (contrato comun local/CI):
+  - `tools/ai/verify.py` orquesta los cuatro quality gates y se detiene al
+    primer fallo propagando su `exit code`.
+  - `tools/ai/verify_wheel.py` verifica la consistencia de las cuatro fuentes
+    de la version y la presencia de los cinco recursos obligatorios de la
+    plantilla en el wheel, usando solo biblioteca estandar.
+- Pipeline de CI remoto:
+  - Workflow `.github/workflows/ci.yml` con triggers `push` y
+    `pull_request`, `permissions: contents: read`, `strategy.fail-fast:
+    false`, matriz `quality` en Python 3.12 y 3.14, y job `package`
+    dependiente que construye wheel + sdist, ejecuta `verify_wheel.py` y
+    sube exactamente un artifact `dist` (con `if-no-files-found: error`,
+    `retention-days: 14`).
+  - Actions ancladas a SHA completo con tag como comentario:
+    `actions/checkout@v7.0.1`, `astral-sh/setup-uv@v8.1.0`,
+    `actions/upload-artifact@v7.0.1`.
+- CI remoto aprobado en run `30041232754` con los tres jobs en verde:
+  - `quality` Python 3.12: pass.
+  - `quality` Python 3.14: pass.
+  - `package`: pass (wheel + sdist + artifact `dist`, tamano 91715 bytes,
+    no expirado).
+- Validacion local reproduce el contrato remoto:
+  - `uv run python tools/ai/verify.py`: pass (los cuatro gates en verde).
+  - `uv build` + `uv run python tools/ai/verify_wheel.py`: pass
+    (cuatro fuentes de version coinciden; cinco recursos obligatorios
+    presentes).
+- Decisiones: ADR-011 anadida (`docs/decisions.md`) sobre el hardening
+  operativo, los scripts locales, la matriz quality, el job package
+  unico, el artifact unico y las Actions fijadas por SHA.
+- Documentacion actualizada: `README.md` (badge CI + atajo canonico),
+  `AGENTS.md` (orquestador canonico), `.opencode/commands/verify.md`
+  (orquestador + validacion de empaquetado), `docs/architecture.md`
+  (seccion "Pipeline de validacion reproducible (CI/local)"),
+  `docs/todos.md` (CI hardening completado, tareas menores registradas),
+  `docs/ai/evaluations.md` (primera entrada del registro).
 
-## Archivos modificados o creados
+## Archivos creados o modificados en este bloque
 
-- `src/python_ai_template/__init__.py` (nuevo): expone `__version__ =
-  "0.1.0"`.
-- `src/python_ai_template/cli.py` (nuevo): argparse con `--version`,
-  `--help`, `--name`, `--package` y `--destination`; delega en
-  `generator.generate`.
-- `src/python_ai_template/generator.py` (nuevo): nucleo del generador con
-  acceso a la plantilla via `importlib.resources` y recorrido determinista
-  via `_walk_template(Traversable)`.
-- `src/python_ai_template/template/...` (movido completo desde `template/`):
-  todos los archivos del directorio `template/` original, ahora dentro
-  del paquete.
-- `tools/new_project.py` (reescrito como shim determinista): anade
-  `<repo>/src` a `sys.path`, importa `python_ai_template.cli.main`,
-  termina con `raise SystemExit(main())`.
-- `pyproject.toml` (modificado): anadido `[project.scripts]`,
-  `[tool.hatch.build.targets.wheel] packages`; eliminado
-  `[tool.uv] package = false`; ajustados `[tool.pyright]` y
-  `[tool.pytest.ini_options]` para apuntar a `src/`.
-- `tests/test_new_project.py` (modificado): importa
-  `from python_ai_template import generator as new_project`; anadidos 5
-  tests de `cli.main`.
-- `README.md` (modificado): documenta `uv tool install .` y el console
-  script; conserva la seccion legacy de `tools/new_project.py`.
-- `docs/architecture.md` (modificado): refleja el src layout, los dos
-  puntos de entrada, el wheel instalable y `importlib.resources`.
-- `docs/decisions.md` (modificado): anadido ADR-010 sobre la migracion a
-  paquete instalable.
-- `docs/glossary.md` (modificado): anadidas entradas `python_ai_template`,
-  `Console script`, `CLI`, `Shim local`, `src layout`, `package data`,
-  `importlib.resources`, `Traversable`.
+- `tools/ai/verify.py` (nuevo): orquestador local de los cuatro gates.
+- `tools/ai/verify_wheel.py` (nuevo): verificador del wheel.
+- `.github/workflows/ci.yml` (nuevo): pipeline de CI reproducible.
+- `README.md` (modificado): anadido badge CI y seccion de validacion
+  con el atajo canonico; conservados los cuatro gates visibles.
+- `AGENTS.md` (modificado): el atajo `uv run python tools/ai/verify.py`
+  queda documentado junto a los cuatro gates; `/verify` apunta al
+  orquestador.
+- `.opencode/commands/verify.md` (modificado): paso 1 pasa a ser el
+  orquestador; paso 2 anade la validacion del empaquetado.
+- `docs/architecture.md` (modificado): nueva seccion "Pipeline de
+  validacion reproducible (CI/local)" tras los limites vigentes.
+- `docs/decisions.md` (modificado): anadida ADR-011 sin reescribir las
+  anteriores.
+- `docs/current-state.md` (reescrito): este archivo.
+- `docs/todos.md` (modificado): CI hardening marcado como completado;
+  nuevas tareas de prioridad baja registradas.
+- `docs/ai/evaluations.md` (modificado): primera entrada concreta del
+  registro.
+
+No se modificaron: `pyproject.toml`, `uv.lock`, `src/python_ai_template/`,
+`tools/new_project.py`, `tests/`, `.gitignore`, `.opencode/agents/`,
+`.opencode/skills/`, `opencode.jsonc`, `docs/ai/model-policy.md`,
+`docs/ai/context-policy.md`, `docs/glossary.md`, `docs/mistakes.md`.
 
 ## Validaciones
 
@@ -74,51 +88,49 @@ Repositorio generador:
 - `pyright`: pass.
 - `pytest`: 33 passed.
 
+Orquestador local:
+
+- `uv run python tools/ai/verify.py`: pass (los cuatro gates en verde,
+  exit code 0).
+
 Wheel:
 
-- `uv build`: produce `dist/python_ai_template-0.1.0-py3-none-any.whl` con
-  todos los archivos obligatorios de la plantilla, incluyendo `.gitignore`
-  y `.opencode/.gitignore`.
+- `uv build`: produce `dist/python_ai_template-0.2.2-py3-none-any.whl` y
+  `dist/python_ai_template-0.2.2.tar.gz`.
+- `uv run python tools/ai/verify_wheel.py`: pass (cuatro fuentes de la
+  version coinciden; cinco recursos obligatorios presentes).
 
-Tool install:
+CI remoto (run `30041232754`):
 
-- `uv tool install .`: instala el console script `new-python-project`.
-- `new-python-project --version`: imprime `0.1.0`.
-- `new-python-project --help`: imprime la ayuda con `--name`, `--package`,
-  `--destination`, `--version` y `--help`.
-
-E2E desde `/tmp`:
-
-- `new-python-project --name "Installed Tool Smoke" --package
-  installed_tool_smoke --destination /tmp/installed-tool-smoke`: genera
-  el proyecto completo.
-- Dentro de `/tmp/installed-tool-smoke`:
-  - `uv sync`: pass.
-  - `uv run ruff check .`: pass.
-  - `uv run ruff format --check .`: pass.
-  - `uv run pyright`: pass.
-  - `uv run pytest`: 1 passed.
-
-Shim local:
-
-- `python3 tools/new_project.py --version`: imprime `0.1.0`.
-- `python3 tools/new_project.py --help`: imprime la ayuda.
-
-Limpieza:
-
-- `uv tool uninstall python-ai-template`: deja el sistema limpio.
+- `quality` (Python 3.12): pass.
+- `quality` (Python 3.14): pass.
+- `package`: pass.
+- Artifact `dist` subido, 91715 bytes, no expirado.
 
 ## Decisiones
 
-- ADR-010 anadida: el repositorio pasa de plantilla generadora plana a
-  paquete instalable con src layout, console script y shim local.
+- ADR-011 anadida: hardening operativo v0.3.0. Scripts locales como
+  contrato comun local/CI, matriz `quality` en Python 3.12 y 3.14, job
+  `package` unico dependiente, artifact unico y Actions fijadas por SHA.
 
 ## Problemas pendientes
 
-- Ninguno relativo a la fase 4. Pendiente el commit del conjunto una vez
-  que el usuario lo autorice.
+- Ninguno relativo al hardening operativo v0.3.0. Pendiente el commit
+  del conjunto (documentacion + scripts + workflow) una vez que el
+  usuario lo autorice.
 
 ## Proxima accion
 
-Esperar autorizacion del usuario para commit. Sin acciones adicionales
-del implementer.
+El paquete sigue en `0.2.2`. Queda pendiente, en orden, cuando el usuario
+lo autorice:
+
+1. Bump de version: `project.version` en `pyproject.toml` y `__version__`
+   en `src/python_ai_template/__init__.py` pasan a `0.3.0`, alineados con
+   el tag.
+2. Commit del conjunto (CI + scripts + documentacion) si se hace en bloque,
+   o commits separados segun preferencia.
+3. Creacion del tag `v0.3.0`.
+4. Instalacion local del paquete desde la nueva version con
+   `uv tool install .` y validacion de `new-python-project --version`.
+
+Sin acciones adicionales del implementer hasta autorizacion.

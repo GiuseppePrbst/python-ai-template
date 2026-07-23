@@ -1,5 +1,7 @@
 # python-ai-template
 
+[![CI](https://github.com/GiuseppePrbst/python-ai-template/actions/workflows/ci.yml/badge.svg)](https://github.com/GiuseppePrbst/python-ai-template/actions/workflows/ci.yml)
+
 Plantilla generadora de proyectos Python compatibles con el stack de desarrollo
 asistido por IA. A partir de este repositorio se generan proyectos nuevos
 ejecutando el console script `new-python-project` (tras `uv tool install .`)
@@ -95,13 +97,39 @@ Tampoco realiza commits ni modifica repositorios git existentes.
 
 ## Validación del repositorio generador
 
+Atajo canónico (orquesta los cuatro gates y se detiene en el primer fallo
+propagando su `exit code`):
+
 ```bash
 uv sync
+uv run python tools/ai/verify.py
+```
+
+Detrás de este comando se ejecutan, en este orden, los cuatro gates
+obligatorios:
+
+```bash
 uv run ruff check .
 uv run ruff format --check .
 uv run pyright
 uv run pytest
 ```
+
+El script `tools/ai/verify.py` usa solo biblioteca estándar, invoca cada gate
+con `subprocess.run` (lista, sin `shell=True`, sin `capture_output`) y
+transmite la salida en vivo. Su contrato es idéntico en local y en CI.
+
+Validación adicional del empaquetado (wheel + recursos):
+
+```bash
+rm -rf dist
+uv build
+uv run python tools/ai/verify_wheel.py
+```
+
+`verify_wheel.py` confirma que `pyproject.toml`, `__version__`, el nombre
+del wheel y `METADATA Version` coinciden, y que el wheel contiene los
+cinco recursos obligatorios de la plantilla.
 
 ## Validación E2E del generador
 
