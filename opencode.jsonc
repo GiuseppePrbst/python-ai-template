@@ -1,0 +1,19 @@
+// Configuración de proyecto para OpenCode.
+// El modelo, provider y API key se heredan de la configuración global
+// (~/.config/opencode/opencode.json) y NO deben duplicarse aquí.
+// Este archivo no almacena secretos.
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "./AGENTS.md"
+  ],
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 16000
+  },
+  "permission": {
+    "edit": "allow",
+    "bash": "ask"
+  }
+}

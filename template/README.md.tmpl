@@ -1,0 +1,31 @@
+# {{PROJECT_NAME}}
+
+Proyecto Python mínimo con estructura `src` layout, generado a partir de la
+plantilla `python-ai-template`.
+
+## Requisitos
+
+- Python 3.12 o superior
+- `uv` (opcional; se usa si está instalado)
+
+## Instalación
+
+```bash
+uv venv .venv
+uv sync
+source .venv/bin/activate
+```
+
+## Validación
+
+```bash
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run pytest
+```
+
+## Uso
+
+Este proyecto es un punto de partida. Añade tus módulos bajo
+`src/{{PACKAGE_NAME}}/` y tus tests bajo `tests/`.

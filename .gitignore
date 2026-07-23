@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.pyright/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+
+# Node.js tooling (defensive, for tools that may be installed locally)
+node_modules/
+
+# IDEs and OS files
+.vscode/
+.idea/
+.DS_Store
