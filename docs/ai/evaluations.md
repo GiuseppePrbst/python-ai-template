@@ -100,3 +100,239 @@ No se registran impresiones generales: solo experimentos comparables con una tar
   matrix/no-matrix. Se mantiene en el modelo diario. No se escala a
   premium para esta tarea porque la calidad entregada fue suficiente con
   las correcciones humanas ya incorporadas.
+
+### 2026-07-23 — Capa de exploración y compactación v0.3.1 (scout, /review, context-handoff, structured-compaction)
+
+- **Modelo**: `MiniMax-M3` (`minimax-direct/MiniMax-M3`).
+- **Proveedor**: MiniMax.
+- **Interfaz**: OpenCode 1.18.4 (CLI + plugin autodescubierto desde `.opencode/plugins/`).
+- **Tarea**: añadir una capa de exploración y compactación al
+  repositorio `python-ai-template` sin modificar el comportamiento
+  del generador ni introducir dependencias de runtime. Entregables:
+  (a) agente `scout` de solo lectura en
+  `.opencode/agents/scout.md`; (b) comando `/review` manual en
+  `.opencode/commands/review.md`; (c) skill `context-handoff` en
+  `.opencode/skills/context-handoff/SKILL.md` con el formato
+  canónico de diez secciones obligatorias; (d) plugin
+  `structured-compaction` en
+  `.opencode/plugins/structured-compaction.ts` registrado en el
+  hook `experimental.session.compacting` y que añade una sola
+  entrada compacta a `output.context` (sin tocar `output.prompt`,
+  sin escribir archivos, sin usar red, `BunShell` ni logs
+  permanentes); (e) bump de versión `0.3.0` → `0.3.1`; (f)
+  alineación de `/handoff` con el formato canónico; (g) registro de
+  ADR-012; (h) actualización de
+  `AGENTS.md`, `docs/architecture.md`,
+  `docs/ai/context-policy.md`, `docs/todos.md` y este registro.
+- **Complejidad**: alta (involucra tipos y firmas reales de un SDK
+  externo, restricciones del hook experimental, formato canónico
+  nuevo y validación sin `tsc`/`npx`).
+- **Prompt o entrada**: conversación de varias iteraciones con
+  planificación, decisiones explícitas del usuario (no modificar
+  `output.prompt`, no usar `tsc`/`npx`/`BunShell`/`tui.d.ts`,
+  `/review` manual, contrato de scout en nueve secciones, contrato
+  del plugin en ocho secciones, diez secciones obligatorias para
+  handoff), implementación, validación y cierre documental.
+- **Resultado del modelo**:
+  - Cuatro archivos creados y validados:
+    - `.opencode/agents/scout.md` (nuevo).
+    - `.opencode/commands/review.md` (nuevo).
+    - `.opencode/skills/context-handoff/SKILL.md` (nuevo).
+    - `.opencode/plugins/structured-compaction.ts` (nuevo;
+      **estrictamente estático**, tipado como `Plugin` de
+      `@opencode-ai/plugin` 1.18.4, importa únicamente el tipo
+      `Plugin` y añade una sola cadena literal a `output.context`).
+  - Once archivos modificados: `pyproject.toml`,
+    `src/python_ai_template/__init__.py`, `uv.lock`,
+    `AGENTS.md`, `.opencode/commands/handoff.md`,
+    `.opencode/commands/review.md`,
+    `.opencode/skills/context-handoff/SKILL.md`,
+    `docs/architecture.md`, `docs/ai/context-policy.md`,
+    `docs/decisions.md`, `docs/todos.md`, `docs/current-state.md`,
+    `docs/ai/evaluations.md`. `opencode.jsonc` se mantuvo intacto:
+    la verificación confirmó que `.opencode/plugins/*.ts` se
+    autodescubre sin necesidad de declararlo.
+  - Sin cambios en `src/python_ai_template/` (más allá del bump
+    de `__version__`), `tests/`, `tools/`, `tools/ai/`,
+    `.github/workflows/ci.yml`, `docs/glossary.md`,
+    `docs/mistakes.md`, `README.md`, `tools/new_project.py`. El
+    comportamiento del generador es idéntico al de v0.3.0.
+- **Tiempo invertido**: varias sesiones interactivas con iteraciones
+  de planificación, decisiones explícitas del usuario, primera
+  revisión interna (veredicto "Requiere cambios"), implementación
+  de las correcciones, segunda revisión y cierre documental.
+- **Correcciones humanas**:
+  - Tras la primera revisión: refactorización del plugin para
+    eliminar toda lectura de `docs/current-state.md` y
+    `pyproject.toml`. La versión revisada del plugin es
+    estrictamente estática (sin `node:fs`, sin `node:path`, sin
+    `readFile`, sin extracción de Markdown, sin regex de
+    `pyproject.toml`, sin valores `(no leído en esta sesión)`).
+    El plugin importa únicamente el tipo `Plugin` desde
+    `@opencode-ai/plugin` y añade una sola cadena literal a
+    `output.context`.
+  - Corrección del header `## Siguiente acción concreta` en
+    `docs/current-state.md` (faltaba la tilde en `acción`) y
+    reescritura sistemática del archivo en UTF-8 con tildes
+    correctas, manteniendo los hechos verificables del bloque de
+    trabajo.
+  - Ampliación de `/review` con un chequeo explícito de plugins
+    de compactación: no escriben archivos, no leen archivos vía
+    filesystem, no usan shell, no llaman a la red, no generan
+    logs permanentes, no modifican `output.prompt` y sólo agregan
+    contexto auxiliar a `output.context`.
+  - Corrección del `scout` para usar exactamente las nueve
+    secciones del contrato del usuario (objetivo interpretado,
+    hechos verificados, flujo actual, decisiones aplicables,
+    riesgos, hipótesis, preguntas abiertas, archivos que
+    probablemente requerirían cambios, siguiente lectura
+    recomendada), en lugar del formato libre inicial.
+  - Realineación de `/review` con los cuatro veredictos
+    permitidos (`Aprobado`, `Aprobado con cambios menores`,
+    `Requiere cambios`, `Rechazado`) y las ocho secciones del
+    formato de salida.
+  - Migración de `context-handoff` y `docs/ai/context-policy.md`
+    a las diez secciones del formato canónico (incluidas las dos
+    nuevas: "Hechos verificados" y "Divergencias detectadas").
+  - Confirmación empírica de que `opencode debug config` registra
+    el plugin con `scope: "local"` desde `.opencode/plugins/`, lo
+    que evitó modificar `opencode.jsonc`.
+  - Sustitución del intento inicial de usar `npx tsc` por greps
+    de validación sobre el plugin, alineados con la regla del
+    usuario de no añadir herramientas temporales.
+- **Validaciones estáticas** (comprobaciones sobre archivos y
+  configuración, sin ejecutar el repositorio):
+  - Inspección directa del código de
+    `.opencode/plugins/structured-compaction.ts` (125 líneas):
+    importa únicamente `import type { Plugin } from
+    "@opencode-ai/plugin"` (línea 49, type-only); declara
+    `STATIC_COMPACTION_REMINDER` como constante literal; registra
+    únicamente el hook `experimental.session.compacting`; el
+    callback realiza una sola operación
+    `output.context.push(STATIC_COMPACTION_REMINDER)` (línea 122);
+    no asigna `output.prompt` (la única mención del identificador
+    está en el docstring, línea 12, como documentación de la
+    promesa, no como código).
+  - `grep -nE "node:fs|node:path|readFile|writeFile|readdir|stat\(" .opencode/plugins/structured-compaction.ts`:
+    cero coincidencias.
+  - `grep -c "output.context.push" .opencode/plugins/structured-compaction.ts`:
+    `1`.
+  - `grep '^## ' docs/current-state.md`: los diez encabezados
+    canónicos literales en orden.
+  - Revisión de `opencode.jsonc`: intacto (sin cambios en esta
+    unidad); plugin autodescubierto por OpenCode 1.18.4 desde
+    `.opencode/plugins/` con `scope: "local"`.
+  - `git diff --check`: pass.
+  - `git status --short`: 11 archivos modificados + 4 untracked en
+    el momento del cierre de la corrección.
+  - `git diff --stat`: único cambio "no esperado" en superficie es
+    el bump de `uv.lock` que `uv` aplica al detectar el cambio de
+    `pyproject.toml`.
+- **Validaciones funcionales** (ejecutores reales corridos en esta
+  sesión):
+  - `uv run ruff check .`: pass.
+  - `uv run ruff format --check .`: pass.
+  - `uv run pyright`: pass (`0 errors, 0 warnings, 0 informations`).
+  - `uv run pytest`: pass (`33 passed`).
+  - `uv run python tools/ai/verify.py`: pass (los cuatro gates en
+    verde, exit 0).
+  - `rm -rf dist && uv build`:
+    `python_ai_template-0.3.1-py3-none-any.whl`,
+    `python_ai_template-0.3.1.tar.gz`.
+  - `uv run python tools/ai/verify_wheel.py`: pass (cuatro
+    fuentes de la versión coinciden en `0.3.1`; cinco recursos
+    obligatorios presentes).
+  - **Sesión interactiva con el agente `scout`** sobre el empaquetado
+    del template y la validación del wheel. Identificó correctamente
+    `generator.py`, `template/`, `pyproject.toml`, `verify_wheel.py`
+    y `ci.yml`; explicó el flujo Hatchling -> `package data` ->
+    `importlib.resources` -> `verify_wheel.py` -> job `package`;
+    separó hechos, riesgos, hipótesis y preguntas abiertas según su
+    contrato de nueve secciones; no modificó archivos. Observación:
+    la respuesta fue correcta pero más extensa de lo deseable para
+    el perfil compacto del scout.
+  - **Ejecución interactiva de `/review`** sobre el diff de la
+    unidad. Veredicto: **Aprobado con cambios menores**. Sin
+    bloqueantes ni mayores. Cuatro hallazgos menores: (1) deriva
+    histórica de `docs/todos.md` sobre v0.3.0; (2) permisos
+    heterogéneos en `.opencode/agents/`; (3) validación estática
+    del plugin no incorporada a CI; (4) IDs de sesión demasiado
+    específicos en `docs/current-state.md`.
+  - Carga del plugin por OpenCode 1.18.4:
+    - `opencode --version`: `1.18.4`.
+    - `opencode debug config`: el plugin aparece en `plugin_origins`
+      con `scope: "local"` desde
+      `file:///home/giuseppe/projects/python-ai-template/.opencode/plugins/structured-compaction.ts`.
+    - `opencode run --print-logs --log-level INFO --format json`:
+      crea la sesión `ses_06f29e98bffeJ55fPuQMKLnl4U` (primera
+      prueba) y `ses_06f1aa6dcffeyMi1xpOBP4ZJT2` (segunda prueba
+      tras la corrección) con `version=1.18.4`, sin errores de
+      carga del plugin.
+- **Validaciones funcionales pendientes** (no ejecutadas en esta
+  sesión; deben ejecutarse en una sesión interactiva real o al
+  empujar los commits):
+  - Compactación real disparada por umbral en OpenCode 1.18.4 (la
+    carga del plugin se verificó en una sesión real corta; la
+    compactación real no se provocó).
+  - Sesión limpia de reconstrucción de contexto al inicio de una
+    sesión nueva en un árbol de trabajo fresco.
+  - CI remota (run GitHub Actions); los cambios no están en `main`
+    ni han sido empujados por el usuario.
+- **Revisión independiente**: aprobada tras la corrección de los
+  hallazgos bloqueantes (acento faltante en el header) y mayores
+  (uso de filesystem por el plugin; ausencia de chequeo de
+  filesystem en `/review`). La sesión interactiva real de `/review`
+  emitió el veredicto **Aprobado con cambios menores** (cuatro
+  hallazgos menores documentados en el informe). Las dos rondas de
+  revisión previas y la interactiva se documentan en esta evaluación
+  y en `docs/current-state.md`.
+- **Decisión de uso futuro**: el modelo `MiniMax-M3` ha demostrado
+  capacidad adecuada para integrar tipos de un SDK externo
+  (`@opencode-ai/plugin` 1.18.4) cuando el usuario proporciona los
+  contratos exactos y las restricciones (no `tsc`, no `npx`,
+  contrato de secciones, ausencia de secretos y de escritura en el
+  plugin, plugin estrictamente estático). La supervisión humana
+  sigue siendo necesaria para: alinear el plugin con los hooks
+  experimentales, ajustar el formato de las secciones canónicas,
+  validar el formato del handoff a la primera iteración, y detectar
+  regresiones cuando el plugin introduce dependencias dinámicas
+  no autorizadas por el contrato. Se mantiene en el modelo diario.
+  Las sesiones interactivas reales (scout, /review) confirmaron que
+  ambos artefactos responden a su contrato documentado sin
+  regresiones. El scout mostró una tendencia a respuestas más
+  extensas de lo compacto esperado; si persiste, evaluar un límite
+   de extensión explícito en su archivo de agente.
+
+### 2026-07-23 — Sesión limpia reducida de reconstrucción de contexto (v0.3.1)
+
+- **Modelo**: `opencode/deepseek-v4-flash-free`.
+- **Proveedor**: OpenCode / DeepSeek.
+- **Interfaz**: OpenCode Web.
+- **Tarea**: reconstruir el estado del proyecto desde cero en una
+  sesión nueva (tras cambiar de modelo por agotamiento de cuota en
+  la ejecución anterior), leyendo únicamente `AGENTS.md`,
+  `docs/current-state.md`, `git status --short` y
+  `git log --oneline -3`, sin modificar archivos.
+- **Complejidad**: baja (tarea acotada de lectura y reconstrucción).
+- **Prompt o entrada**: instrucción de reconstruir el estado actual
+  leyendo solo los cuatro recursos enumerados, máximo 400 palabras,
+  sin escribir archivos.
+- **Resultado del modelo**: reconstruyó correctamente objetivo v0.3.1,
+  11 archivos modificados + 4 untracked, último commit `49dfcde`,
+  plugin estático y experimental, quality gates y wheel aprobados,
+  CI remota pendiente, compactación real pendiente. Sin texto
+  corrupto ni invenciones.
+- **Tiempo invertido**: una sola interacción.
+- **Correcciones humanas**: ninguna.
+- **Validaciones**: no aplican quality gates de código (tarea de solo
+  lectura). La salida fue revisada visualmente: no hay texto corrupto,
+  los hechos citados coinciden con el estado real del repositorio.
+- **Decisión de uso futuro**: la sesión limpia reducida funciona como
+  validación de continuidad mínima. La variante ampliada (con
+  `docs/architecture.md` y ADR) queda como opcional, no como bloqueo.
+  El modelo es adecuado para tareas de reconstrucción acotada de
+  contexto siempre que se limiten explícitamente los documentos a
+  leer para evitar deriva. La ejecución anterior con el mismo modelo
+  (DeepSeek V4 Flash Free) produjo salida corrupta tras agotamiento
+  de cuota, por lo que no se considera evidencia válida; esta
+  ejecución sí lo es.

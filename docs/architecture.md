@@ -181,6 +181,54 @@ en CI. Los detalles viven en `.github/workflows/ci.yml`, ADR-011 y
   inmutables reasignados. Los SHAs concretos viven en
   `.github/workflows/ci.yml`.
 
+## Capa de exploración y compactación
+
+La operativa de los agentes se apoya en una capa de exploración y
+compactación que no toca el comportamiento del generador ni añade
+dependencias. Sus piezas viven en `.opencode/` y se documentan
+unidamente como configuración del espacio de trabajo. Su autoridad
+documental sigue siendo el código y `docs/`.
+
+- **Agente `scout`** (`.opencode/agents/scout.md`). Exploración de
+  **solo lectura**: no edita, no crea archivos, no instala
+  dependencias, no ejecuta acciones destructivas y no decide
+  arquitectura. Distingue hechos, inferencias e hipótesis, cita
+  rutas relativas y símbolos concretos, y devuelve un resumen
+  compacto en el formato definido en el agente. Contrato formal y
+  formato de salida en ADR-012.
+- **Comando `/review`** (`.opencode/commands/review.md`). Atajo
+  **manual** que lanza el agente `reviewer` sobre el diff vigente
+  (staged, unstaged y untracked). OpenCode 1.18.4 expone
+  `command.execute.before` pero **no** `command.execute.after`, por
+  lo que `/review` no se automatiza mediante hooks. Su contrato y
+  formato de salida son los definidos en `.opencode/commands/review.md`.
+- **Skill `context-handoff`** (`.opencode/skills/context-handoff/SKILL.md`).
+  Define el formato canónico de `docs/current-state.md` con **diez
+  secciones obligatorias** en orden: objetivo actual, estado de la
+  tarea, hechos verificados, decisiones adoptadas, archivos
+  modificados, validaciones ejecutadas, errores pendientes, enfoques
+  rechazados y motivo, divergencias detectadas, siguiente acción
+  concreta.
+- **Plugin `structured-compaction`**
+  (`.opencode/plugins/structured-compaction.ts`). Plugin TypeScript
+  autodescubierto por OpenCode desde `.opencode/plugins/`. Registra
+  **únicamente** el hook `experimental.session.compacting` y agrega
+  **una sola entrada estática** (cadena literal definida en el
+  propio plugin) a `output.context`. **Nunca** asigna `output.prompt`.
+  No usa filesystem (no importa módulos del sistema de archivos,
+  no lee ni escribe archivos). No usa shell. No usa la red. No
+  genera logs permanentes. No persiste información. No intenta
+  reconstruir el estado real del repositorio. La reconstrucción
+  del estado la hacen el propio mecanismo nativo de compactación
+  de OpenCode y el comando `/handoff`. El hook es **experimental**
+  en OpenCode 1.18.4; cualquier cambio se registra con una nueva
+  ADR. Detalles y contrato en ADR-012.
+
+Estos elementos son **auxiliares**: el plugin de compactación produce
+un resumen que se trata como pista, no como fuente de verdad; el
+agente `scout` describe el repositorio sin proponer arquitectura; el
+comando `/review` produce un veredicto que el usuario debe aceptar.
+
 ## Dependencias
 
 - **Runtime del paquete `python-ai-template`**: ninguna. El paquete y el
