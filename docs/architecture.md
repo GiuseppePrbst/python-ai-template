@@ -8,9 +8,18 @@ este archivo.
 ## Resumen
 
 `python-ai-template` es una **plantilla generadora** de proyectos Python
-mínimos con layout `src/`. El repositorio no entrega un paquete instalable:
-expone un generador (`tools/new_project.py`) que produce un proyecto
-independiente a partir de los archivos parametrizados en `template/`.
+mínimos con layout `src/`. El repositorio es un **paquete instalable** que
+produce proyectos independientes a partir de la plantilla empaquetada
+como `package data` dentro del propio paquete.
+
+Hay dos formas equivalentes de invocar el generador:
+
+- **Console script instalado**: `uv tool install .` deja
+  `new-python-project` disponible en `PATH` desde cualquier directorio.
+  Representa la versión del paquete instalada en el toolchain.
+- **Shim local** (`tools/new_project.py`): añade `<repo>/src` al
+  `sys.path` y delega en `python_ai_template.cli.main`. Representa el
+  checkout local y se usa durante el desarrollo sin instalar.
 
 El generador usa solo la biblioteca estándar de Python, valida sus
 argumentos, escribe archivos UTF-8 sin BOM con finales de línea LF, y mueve
@@ -40,33 +49,52 @@ ADR-008 para las alternativas consideradas.
 
 ## Componentes
 
-- `tools/new_project.py`: generador ejecutable. Punto de entrada único para
-  producir un proyecto nuevo. Solo usa `pathlib`, `argparse`, `tempfile`,
-  `shutil` y `keyword` de la biblioteca estándar.
-- `template/`: árbol de archivos que se copian al proyecto generado.
-  - `pyproject.toml.tmpl`: configuración de `uv`, `ruff`, `pyright` y
-    `pytest` del proyecto generado. Usa `{{DISTRIBUTION_NAME}}` para
-    `[project].name` y `{{PACKAGE_NAME}}` para `[tool.hatch.build.targets.wheel]
-    packages`.
-  - `README.md.tmpl`: documentación visible del proyecto generado. Usa
-    `{{PROJECT_NAME}}` y `{{PACKAGE_NAME}}`.
-  - `.gitignore`: patrones de ignorado del proyecto generado.
-  - `AGENTS.md`: reglas operativas para los agentes del proyecto generado.
-  - `opencode.jsonc`: configuración de OpenCode del proyecto generado.
-  - `.opencode/`: agentes, comandos y skills de OpenCode del proyecto
-    generado. Incluye un `.opencode/.gitignore` que excluye artefactos de
-    instalación local (`node_modules`, `package*.json`, `bun.lock*`).
-  - `docs/`: documentación estructurada del proyecto generado
-    (arquitectura, decisiones, errores, glosario, pendientes, estado,
-    IA). En el proyecto generado los placeholders ya están sustituidos.
-  - `src/__package_name__/`: código fuente del proyecto generado
-    (`__init__.py.tmpl`).
-  - `tests/test_smoke.py.tmpl`: smoke test del proyecto generado.
-- `tests/test_new_project.py`: tests del generador.
-- `pyproject.toml`: configuración del propio repositorio generador. Usa
-  `[tool.uv] package = false` para que `uv sync` no intente construir un
-  wheel del repositorio generador (que no es un paquete instalable). El
-  build system sigue siendo hatchling por compatibilidad.
+- `src/python_ai_template/`: paquete instalable con la lógica del
+  generador.
+  - `__init__.py`: expone `__version__ = "0.1.0"`. Única fuente de verdad
+    para `--version` y los metadatos del wheel.
+  - `cli.py`: interfaz de línea de comandos. Construye el `ArgumentParser`
+    con `--version` (vía `argparse`'s built-in `action="version"`),
+    `--help`, `--name`, `--package` y `--destination`. Su `main(argv)`
+    valida que los argumentos obligatorios estén presentes y delega en
+    `generator.generate`.
+  - `generator.py`: núcleo del generador. Define las validaciones
+    (`_validate_name`, `_validate_package`, `_check_unresolved_placeholders`,
+    `_check_forbidden_opencode_artifacts`, `_check_sensitive_files`,
+    `_check_required_paths`), la sustitución de placeholders (`_render`),
+    el cálculo de rutas de destino (`_compute_dest_path`) y la
+    `generate()`. Localiza la plantilla con
+    `_template_root()` que devuelve
+    `importlib.resources.files("python_ai_template").joinpath("template")`.
+    La función `_walk_template` recorre el `Traversable` recursivamente
+    en orden determinista (orden lexicográfico por nombre en cada
+    nivel) y emite tuplas `(Path relativo, Traversable)` para cada
+    archivo, conservando literalmente nombres como `.gitignore`,
+    `.opencode`, `__package_name__` y archivos `.tmpl`. No materializa
+    la plantilla a un segundo directorio temporal: lee cada entrada
+    directamente del `Traversable` y la escribe en el staging.
+  - `template/`: árbol parametrizado que se copia a cada proyecto
+    generado. Vive dentro del paquete para que el wheel la incluya y
+    sea localizable con `importlib.resources`. Contiene los mismos
+    archivos que en la fase 3 (`pyproject.toml.tmpl`, `README.md.tmpl`,
+    `__init__.py.tmpl`, `test_smoke.py.tmpl`, `.gitignore`, `AGENTS.md`,
+    `opencode.jsonc`, `.opencode/`, `docs/`), ahora bajo
+    `src/python_ai_template/template/`.
+- `tools/new_project.py`: shim de compatibilidad. Añade `<repo>/src` al
+  principio de `sys.path`, importa `python_ai_template.cli.main` y termina
+  con `raise SystemExit(main())`. Representa el checkout local; no intenta
+  caer a una versión instalada del paquete.
+- `tests/test_new_project.py`: tests del generador y de la CLI. Cubre
+  tanto `python_ai_template.generator` como `python_ai_template.cli.main`
+  (incluye `--version`, `--help`, argumentos de generación, argumentos
+  faltantes y errores de validación).
+- `pyproject.toml`: configuración del repositorio generador. Declara el
+  paquete `python-ai-template` (versión `0.1.0`) con `requires-python =
+  ">=3.12"`, registra el console script
+  `new-python-project = "python_ai_template.cli:main"`, configura
+  hatchling para construir un wheel desde
+  `src/python_ai_template/`, y mantiene `ruff`, `pyright` y `pytest`
+  como dev-deps.
 - `README.md`: descripción del repositorio generador y guía de uso.
 - `AGENTS.md`: reglas operativas para cualquier agente que trabaje en este
   repositorio.
@@ -77,9 +105,20 @@ ADR-008 para las alternativas consideradas.
 
 ## Límites vigentes
 
-- El repositorio no entrega un paquete instalable. `uv sync` resuelve las
-  dependencias de desarrollo (`ruff`, `pyright`, `pytest`) pero no intenta
-  construir un wheel.
+- El repositorio entrega un paquete instalable. `uv tool install .` deja
+  disponible el console script `new-python-project`. `uv sync` resuelve
+  las dev-deps (`ruff`, `pyright`, `pytest`) y construye el paquete en
+  modo editable.
+- Hay dos puntos de entrada al generador: el console script
+  `new-python-project` (versión instalada) y el shim
+  `tools/new_project.py` (versión de desarrollo desde el checkout local).
+  Ambos terminan en `python_ai_template.cli.main`.
+- El paquete no tiene dependencias de runtime. Solo biblioteca estándar
+  (`argparse`, `keyword`, `re`, `shutil`, `sys`, `tempfile`,
+  `importlib.resources`, `pathlib`).
+- La plantilla viaja dentro del paquete como `package data` y se accede
+  con `importlib.resources.files("python_ai_template").joinpath("template")`.
+  No depende del directorio de trabajo ni de la ruta del repositorio.
 - El generador no ejecuta `uv`, `git` ni ningún otro comando externo.
 - El generador no modifica archivos fuera del directorio destino. No toca
   el repositorio actual ni repositorios git existentes.
@@ -98,8 +137,8 @@ ADR-008 para las alternativas consideradas.
 
 ## Dependencias
 
-- **Runtime del generador**: ninguna. El generador usa solo la biblioteca
-  estándar de Python.
+- **Runtime del paquete `python-ai-template`**: ninguna. El paquete y el
+  console script usan solo la biblioteca estándar de Python.
 - **Desarrollo del repositorio generador**: `pyright`, `pytest`, `ruff`,
   gestionadas con `uv` como dev-dependencies.
 - **Runtime de los proyectos generados**: ninguna declarada por defecto.
@@ -124,13 +163,24 @@ Un cambio en el generador o en la plantilla **no se considera terminado**
 hasta ejecutar, con datos representativos (incluido un nombre visible con
 espacios):
 
-1. Generación de un proyecto independiente.
-2. Dentro del proyecto generado:
+1. Validacion del repositorio generador con sus cuatro quality gates.
+2. Construccion del wheel y verificacion de que el archivo
+   `python_ai_template/template/` y sus archivos ocultos (`.gitignore`,
+   `.opencode/.gitignore`, `__package_name__`, `.tmpl`) estan dentro.
+3. Instalacion con `uv tool install .` y validacion de
+   `new-python-project --version` y `new-python-project --help`.
+4. Generacion de un proyecto independiente desde un directorio que **no
+   pertenezca al repositorio** (p. ej. `/tmp`).
+5. Dentro del proyecto generado:
    - `uv sync`
    - `uv run ruff check .`
    - `uv run ruff format --check .`
    - `uv run pyright`
    - `uv run pytest`
+6. Validacion manual del shim local con
+   `python3 tools/new_project.py --version` y `--help` desde la raiz
+   del repositorio.
+7. Desinstalacion limpia con `uv tool uninstall python-ai-template`.
 
 Los tests unitarios del generador son necesarios pero no sustituyen este
 E2E semántico. El defecto documentado en `docs/mistakes.md` ilustra por
@@ -141,13 +191,17 @@ sobre el proyecto generado con un nombre visible con espacios.
 
 Cualquier cambio que:
 
-- Añada una dependencia de runtime al generador.
-- Modifique la API pública de `tools/new_project.py` (firma, argumentos,
-  códigos de salida, comportamiento de staging).
-- Introduzca un nuevo módulo en `tools/` o subdivida los existentes.
+- Añada una dependencia de runtime al paquete.
+- Modifique la API pública de `python_ai_template.cli.main` (firma,
+  argumentos, códigos de salida) o de `python_ai_template.generator.generate`.
+- Introduzca un nuevo módulo en `src/python_ai_template/` o subdivida los
+  existentes.
+- Modifique el comportamiento del shim `tools/new_project.py` (sys.path,
+  import target, terminación).
 - Cambie la configuración de calidad del repositorio generador (`ruff`,
   `pyright`, `pytest`).
 - Cambie la configuración de OpenCode del proyecto o del global.
-- Modifique la estructura de `template/` o el conjunto de placeholders.
-- Modifique los límites entre el generador, la plantilla y los proyectos
-  generados.
+- Modifique la estructura de la plantilla (`src/python_ai_template/template/`)
+  o el conjunto de placeholders.
+- Modifique los límites entre el paquete, la plantilla, los proyectos
+  generados y el shim.

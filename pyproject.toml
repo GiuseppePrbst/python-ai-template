@@ -9,6 +9,9 @@ description = "Generador de proyectos Python compatibles con el stack de desarro
 readme = "README.md"
 requires-python = ">=3.12"
 
+[project.scripts]
+new-python-project = "python_ai_template.cli:main"
+
 [dependency-groups]
 dev = [
     "pyright",
@@ -16,8 +19,8 @@ dev = [
     "ruff",
 ]
 
-[tool.uv]
-package = false
+[tool.hatch.build.targets.wheel]
+packages = ["src/python_ai_template"]
 
 [tool.ruff]
 target-version = "py312"
@@ -27,12 +30,12 @@ line-length = 88
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.pyright]
-include = ["tests", "tools"]
-extraPaths = ["tools"]
+include = ["src", "tests"]
+extraPaths = ["src"]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
-pythonpath = ["tools"]
+pythonpath = ["src"]

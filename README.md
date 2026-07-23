@@ -2,24 +2,36 @@
 
 Plantilla generadora de proyectos Python compatibles con el stack de desarrollo
 asistido por IA. A partir de este repositorio se generan proyectos nuevos
-ejecutando `tools/new_project.py`.
+ejecutando el console script `new-python-project` (tras `uv tool install .`)
+o el shim local `tools/new_project.py` (desde el checkout).
 
 ## Requisitos
 
 - Python 3.12 o superior.
-- `uv` para ejecutar las validaciones (opcional; se usa si está instalado).
+- `uv` para ejecutar las validaciones y para `uv tool install`.
 
 ## Estructura
 
-- `template/`: archivos parametrizados que se copian al proyecto generado.
-  Contiene los placeholders `{{PROJECT_NAME}}`, `{{PACKAGE_NAME}}` y
-  `{{DISTRIBUTION_NAME}}`. El directorio `__package_name__` se renombra al
-  nombre del paquete.
-- `tools/new_project.py`: generador ejecutable, solo biblioteca estándar.
-- `tests/test_new_project.py`: tests del generador.
-- `docs/`: documentación del propio repositorio generador.
-- `pyproject.toml`: configuración de `uv`, `ruff`, `pyright` y `pytest` para
-  el repositorio generador (no entrega un paquete instalable).
+- `src/python_ai_template/`: paquete instalable.
+  - `__init__.py`: expone `__version__ = "0.1.0"`.
+  - `cli.py`: define el console script `new-python-project` con `--name`,
+    `--package`, `--destination`, `--version` y `--help`.
+  - `generator.py`: nucleo del generador. Accede a la plantilla con
+    `importlib.resources.files("python_ai_template").joinpath("template")`
+    y la recorre con un walker determinista que conserva nombres como
+    `.gitignore`, `.opencode`, `__package_name__` y archivos `.tmpl`.
+  - `template/`: archivos parametrizados que se copian al proyecto
+    generado. Contiene los placeholders `{{PROJECT_NAME}}`,
+    `{{PACKAGE_NAME}}` y `{{DISTRIBUTION_NAME}}`. El directorio
+    `__package_name__` se renombra al nombre del paquete.
+- `tools/new_project.py`: shim determinista. Anade `<repo>/src` al
+  `sys.path`, importa `python_ai_template.cli.main` y termina con
+  `raise SystemExit(main())`. Representa el checkout local.
+- `tests/test_new_project.py`: tests del generador y de la CLI.
+- `docs/`: documentacion del propio repositorio generador.
+- `pyproject.toml`: configuracion de `uv`, `ruff`, `pyright` y `pytest`,
+  registro del console script y `[tool.hatch.build.targets.wheel]
+  packages = ["src/python_ai_template"]`.
 
 ## Uso del generador
 
@@ -38,7 +50,22 @@ El generador distingue **tres nombres** (ver ADR-008):
   paquete y se valida con la expresión regular
   `^[a-z0-9]+(?:-[a-z0-9]+)*$`.
 
-Ejemplo:
+### Forma recomendada: console script
+
+Tras `uv tool install .`, el comando `new-python-project` queda disponible
+en `PATH` desde cualquier directorio:
+
+```bash
+new-python-project \
+  --name "Mi Proyecto" \
+  --package mi_proyecto \
+  --destination ~/projects/mi-proyecto
+```
+
+### Forma local: shim de desarrollo
+
+Desde la raiz del repositorio, sin instalar el paquete, se puede invocar
+el shim:
 
 ```bash
 python3 tools/new_project.py \
@@ -47,15 +74,24 @@ python3 tools/new_project.py \
   --destination /ruta/e2e-smoke
 ```
 
-Tras la generación, el generador imprime los próximos pasos:
+El shim siempre representa el checkout local, no una version instalada.
+
+### Opciones comunes
+
+- `--version` imprime `0.1.0` y termina con codigo 0.
+- `--help` imprime la ayuda y termina con codigo 0.
+
+### Tras la generacion
+
+El generador imprime los proximos pasos:
 
 ```bash
 cd /ruta/e2e-smoke
 uv sync
 ```
 
-El generador **no** ejecuta `uv sync` ni ningún otro comando externo. Tampoco
-realiza commits ni modifica repositorios git existentes.
+El generador **no** ejecuta `uv sync` ni ningun otro comando externo.
+Tampoco realiza commits ni modifica repositorios git existentes.
 
 ## Validación del repositorio generador
 

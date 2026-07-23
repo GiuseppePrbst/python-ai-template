@@ -1,17 +1,28 @@
-"""Tests para ``tools/new_project.py``."""
+"""Tests del generador y de su CLI.
+
+Cubre dos APIs:
+
+- ``python_ai_template.generator``: logica de generacion (regresion).
+- ``python_ai_template.cli.main``: console script publico, incluyendo
+  ``--version``, ``--help``, argumentos de generacion y errores de
+  validacion.
+"""
 
 from __future__ import annotations
 
+import io
 import re
 import sys
 import tomllib
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-import new_project  # noqa: E402
+from python_ai_template import __version__, cli  # noqa: E402
+from python_ai_template import generator as new_project  # noqa: E402
 
 PLACEHOLDER_PATTERN = re.compile(r"\{\{[^}]*\}\}")
 
@@ -378,3 +389,79 @@ def test_distribution_validation_failure_leaves_no_partial_destination(
         assert not entry.name.startswith(".new_project_"), (
             f"staging no limpiado: {entry}"
         )
+
+
+# --- CLI: cli.main() cubre --version, --help, generacion y validacion ---
+
+
+# 29. --version imprime la version del paquete y termina con codigo 0.
+def test_cli_version() -> None:
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        with pytest.raises(SystemExit) as exc:
+            cli.main(["--version"])
+    assert exc.value.code == 0
+    assert __version__ in buf.getvalue()
+    assert buf.getvalue().strip() == __version__
+
+
+# 30. --help imprime la ayuda y termina con codigo 0.
+def test_cli_help() -> None:
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        with pytest.raises(SystemExit) as exc:
+            cli.main(["--help"])
+    assert exc.value.code == 0
+    out = buf.getvalue()
+    assert "--name" in out
+    assert "--package" in out
+    assert "--destination" in out
+    assert "--version" in out
+
+
+# 31. Sin argumentos devuelve 2 y reporta error en stderr.
+def test_cli_missing_arguments() -> None:
+    err = io.StringIO()
+    with redirect_stderr(err):
+        rc = cli.main([])
+    assert rc == 2
+    assert "--name" in err.getvalue()
+
+
+# 32. La CLI genera el proyecto con los argumentos validos.
+def test_cli_generates_project(tmp_path: Path) -> None:
+    dest = tmp_path / "out"
+    rc = cli.main(
+        [
+            "--name",
+            "CLI Smoke",
+            "--package",
+            "cli_smoke",
+            "--destination",
+            str(dest),
+        ]
+    )
+    assert rc == 0
+    assert dest.is_dir()
+    assert (dest / "pyproject.toml").is_file()
+    assert (dest / "src" / "cli_smoke" / "__init__.py").is_file()
+
+
+# 33. La CLI rechaza argumentos invalidos y no crea el destino.
+def test_cli_rejects_invalid_package(tmp_path: Path) -> None:
+    dest = tmp_path / "out"
+    err = io.StringIO()
+    with redirect_stderr(err):
+        rc = cli.main(
+            [
+                "--name",
+                "My Project",
+                "--package",
+                "mi-pkg",
+                "--destination",
+                str(dest),
+            ]
+        )
+    assert rc == 2
+    assert not dest.exists()
+    assert "paquete" in err.getvalue()
