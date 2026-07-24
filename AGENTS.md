@@ -24,10 +24,11 @@ uv run ruff check .
 uv run ruff format --check .
 uv run pyright
 uv run pytest
+uv run python tools/ai/verify_opencode.py
 ```
 
 El atajo canónico es `uv run python tools/ai/verify.py`, que invoca los
-cuatro comandos en el mismo orden con `subprocess.run`, se detiene al
+cinco comandos en el mismo orden con `subprocess.run`, se detiene al
 primer fallo y propaga su `exit code`. El contrato es idéntico en local
 y en CI (`.github/workflows/ci.yml`).
 
@@ -43,6 +44,15 @@ uv run python tools/ai/verify_wheel.py
 
 Si alguno falla, el cambio **no** está terminado. Para cambios únicamente de documentación, basta con que los quality gates existentes continúen pasando sin nuevas regresiones.
 
+El quinto gate (`tools/ai/verify_opencode.py`) es una inspección
+textual deliberadamente estrecha: verifica los artefactos vigentes
+de OpenCode (el plugin `structured-compaction`, los archivos del
+agente scout, los comandos `/review` y `/handoff`, la skill
+`context-handoff` y los 10 encabezados canónicos de
+`docs/current-state.md` en orden estricto). No compila TypeScript,
+no ejecuta OpenCode, no usa red y no modifica archivos. Es el gate
+introducido por ADR-013.
+
 ## Definición de terminado
 
 Un cambio se considera terminado solo si se cumplen **todas** estas condiciones:
@@ -52,6 +62,7 @@ Un cambio se considera terminado solo si se cumplen **todas** estas condiciones:
 3. `uv run ruff format --check .` pasa.
 4. `uv run pyright` pasa.
 5. `uv run pytest` pasa.
+6. `uv run python tools/ai/verify_opencode.py` pasa.
 6. El diff fue revisado por el autor antes de declararlo cerrado.
 7. La documentación afectada está actualizada (`docs/`, `README.md` si aplica, docstrings).
 8. No hay secretos, logs temporales ni archivos generados no deseados en el árbol de trabajo.

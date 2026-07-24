@@ -40,11 +40,20 @@ DIST_PATH = REPO_ROOT / "dist"
 DISTRIBUTION_SLUG = "python_ai_template"
 
 REQUIRED_RESOURCES: tuple[str, ...] = (
+    # Plantilla base (anteriores)
     "python_ai_template/template/.gitignore",
     "python_ai_template/template/.opencode/.gitignore",
     "python_ai_template/template/pyproject.toml.tmpl",
     ("python_ai_template/template/src/__package_name__/__init__.py.tmpl"),
     "python_ai_template/template/tests/test_smoke.py.tmpl",
+    # Capa de exploracion y compactacion distribuida (ADR-012)
+    "python_ai_template/template/.opencode/agents/scout.md",
+    "python_ai_template/template/.opencode/commands/review.md",
+    "python_ai_template/template/.opencode/commands/handoff.md",
+    "python_ai_template/template/.opencode/commands/verify.md",
+    "python_ai_template/template/.opencode/commands/compact-test.md",
+    "python_ai_template/template/.opencode/skills/context-handoff/SKILL.md",
+    "python_ai_template/template/.opencode/plugins/structured-compaction.ts",
 )
 
 
@@ -172,7 +181,7 @@ def _read_metadata_version(wheel: Path) -> str:
     raise VerificationError("METADATA no contiene el campo 'Version:'")
 
 
-def _check_required_resources(wheel: Path) -> list[str]:
+def check_required_resources(wheel: Path) -> list[str]:
     with zipfile.ZipFile(wheel) as zf:
         names = set(zf.namelist())
     return [r for r in REQUIRED_RESOURCES if r not in names]
@@ -218,7 +227,7 @@ def main() -> int:
     try:
         expected_version = _read_pyproject_version()
         wheel, sources = _verify(expected_version)
-        missing = _check_required_resources(wheel)
+        missing = check_required_resources(wheel)
     except VerificationError as exc:
         print("=" * 72, file=sys.stderr)
         print(

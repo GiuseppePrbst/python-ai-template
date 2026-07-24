@@ -229,6 +229,61 @@ un resumen que se trata como pista, no como fuente de verdad; el
 agente `scout` describe el repositorio sin proponer arquitectura; el
 comando `/review` produce un veredicto que el usuario debe aceptar.
 
+## Validación estática de OpenCode y baseline de evaluación
+
+Tras la capa de exploración y compactación se incorpora una línea base
+reproducible de **hardening y evaluación** (ADR-013) que no introduce
+telemetría externa, routing automático ni dependencias de runtime. Se
+compone de tres piezas:
+
+- **Validador estático `tools/ai/verify_opencode.py`**. Inspección
+  textual deliberadamente estrecha sobre el plugin
+  `src/python_ai_template/template/.opencode/plugins/structured-compaction.ts`
+  y los archivos vigentes del directorio `.opencode/` del template.
+  Verifica: existencia del plugin; forma del import
+  (`import type { Plugin } from "@opencode-ai/plugin"` y ningún
+  otro módulo); clave estructural del hook
+  `experimental.session.compacting` exactamente una vez; una sola
+  llamada ejecutable a `output.context.push(...)`; ninguna asignación
+  ejecutable a `output.prompt`; ausencia de filesystem, shell, red,
+  logging y persistencia. Verifica además la presencia de los
+  archivos del scout, los comandos `/review` y `/handoff` y la skill
+  `context-handoff`. Verifica finalmente que
+  `docs/current-state.md` contiene los 10 encabezados canónicos
+  exactamente una vez y en orden estricto. **No** compila
+  TypeScript, **no** ejecuta OpenCode, **no** usa red, **no**
+  modifica archivos. Se añade como quinto gate al final de la tupla
+  `GATES` en `tools/ai/verify.py`; el contrato local/CI es único.
+- **Registrador manual `tools/ai/record_evaluation.py`**. CLI opt-in
+  que añade una entrada al registro canónico
+  `docs/ai/evaluations.md`. Sólo biblioteca estándar. Sin consola
+  script; se invoca con `uv run python tools/ai/record_evaluation.py
+  ...`. Sin `--write` imprime preview y no toca el disco; con
+  `--write` realiza una escritura atómica (archivo temporal en el
+  mismo directorio seguido de `Path.replace()`). No genera IDs de
+  sesión, no mide tokens, sólo fecha local `YYYY-MM-DD`.
+- **Comando `/compact-test`** en
+  `.opencode/commands/compact-test.md`. Prueba manual controlada y
+  desechable del plugin de compactación: dispara la compactación de
+  OpenCode (umbral automático o comando soportado, si existe),
+  verifica las 10 secciones canónicas tras el resumen, ejecuta
+  `git status --short` para confirmar que el árbol no cambió y
+  registra el resultado con `record_evaluation.py`. **No** modifica
+  ADR ni `docs/current-state.md` automáticamente. Si la compactación
+  no se dispara por umbral ni por comando soportado, el resultado se
+  clasifica como `inconclusive` y se registra igualmente.
+
+El **scout** además se acota contractualmente: respuesta normal
+aproximadamente ≤ 700 palabras, exploración amplia solicitada
+explícitamente ≤ 1200, máximo 5 riesgos / 5 hipótesis / 5 preguntas
+abiertas, sin ADR completas, sin árboles completos salvo petición.
+La restricción es contractual, no técnica.
+
+**Reversibilidad**: cada componente es aditivo y reversible
+mediante eliminación de archivos. ADR-013 permanece como registro
+histórico aunque el código se revierta; una ADR posterior deberá
+marcarla como reemplazada o revertida.
+
 ## Dependencias
 
 - **Runtime del paquete `python-ai-template`**: ninguna. El paquete y el

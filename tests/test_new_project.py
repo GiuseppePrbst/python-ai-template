@@ -465,3 +465,42 @@ def test_cli_rejects_invalid_package(tmp_path: Path) -> None:
     assert rc == 2
     assert not dest.exists()
     assert "paquete" in err.getvalue()
+
+
+# 34. E2E: el proyecto generado incluye la capa OpenCode distribuida
+# (ADR-013). Verifica los 7 archivos canónicos.
+def test_generated_project_includes_opencode_layer(tmp_path: Path) -> None:
+    dest = tmp_path / "my-project"
+    rc = new_project.generate("My Project", "my_project", dest)
+    assert rc == 0
+    expected = [
+        dest / ".opencode" / "agents" / "scout.md",
+        dest / ".opencode" / "commands" / "review.md",
+        dest / ".opencode" / "commands" / "handoff.md",
+        dest / ".opencode" / "commands" / "verify.md",
+        dest / ".opencode" / "commands" / "compact-test.md",
+        dest / ".opencode" / "skills" / "context-handoff" / "SKILL.md",
+        dest / ".opencode" / "plugins" / "structured-compaction.ts",
+    ]
+    for p in expected:
+        assert p.is_file(), f"falta en el proyecto generado: {p}"
+
+
+# 35. E2E: el plugin generado es byte a byte identico al canonico.
+def test_generated_plugin_matches_canonical(tmp_path: Path) -> None:
+    dest = tmp_path / "my-project"
+    rc = new_project.generate("My Project", "my_project", dest)
+    assert rc == 0
+    canonical = (
+        Path(__file__).resolve().parent.parent
+        / "src"
+        / "python_ai_template"
+        / "template"
+        / ".opencode"
+        / "plugins"
+        / "structured-compaction.ts"
+    )
+    generated = dest / ".opencode" / "plugins" / "structured-compaction.ts"
+    assert canonical.is_file()
+    assert generated.is_file()
+    assert generated.read_bytes() == canonical.read_bytes()

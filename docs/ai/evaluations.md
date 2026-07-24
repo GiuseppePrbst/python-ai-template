@@ -336,3 +336,39 @@ No se registran impresiones generales: solo experimentos comparables con una tar
   (DeepSeek V4 Flash Free) produjo salida corrupta tras agotamiento
   de cuota, por lo que no se considera evidencia válida; esta
   ejecución sí lo es.
+
+### 2026-07-23 — Implementar v0.3.2: validacion estatica de OpenCode y línea
+
+- **Modelo**: `opencode/deepseek-v4-flash-free`.
+- **Proveedor**: `OpenCode / DeepSeek`.
+- **Agente**: `implementer`.
+- **Tarea**: Implementar v0.3.2: validacion estatica de OpenCode y linea base de evaluacion.
+- **Resultado**: `approved-with-minor-changes`.
+- **Duración**: 90.0 minutos.
+- **Escalado**: no.
+- **Correcciones**: tras la primera entrega, el usuario pidio correcciones obligatorias antes de /review: auditoria root<->template, politica canonica de distribucion (template como fuente), sync obligatorio, 7 recursos OpenCode en el wheel, tests E2E en test_new_project, y no cerrar la unidad en docs/todos.md hasta /review + bump + CI + tag. Todas aplicadas.
+- **Notas**: ADR-013, sin telemetria externa, sin routing, sin dependencias de runtime. Quinto gate integrado, registrador manual creado, prueba controlada compact-test documentada, presupuesto contractual del scout anadido. Tests hermeticos en tmp_path. La unidad NO esta cerrada todavia (ver docs/todos.md "En revision").
+
+### 2026-07-23 — v0.3.2 en revision: sync root<->template anadido, 7 recursos
+
+- **Modelo**: `opencode/deepseek-v4-flash-free`.
+- **Proveedor**: `OpenCode / DeepSeek`.
+- **Agente**: `implementer`.
+- **Tarea**: v0.3.2 en revision: sync root<->template anadido, 7 recursos OpenCode exigidos en wheel.
+- **Resultado**: `approved-with-minor-changes`.
+- **Duración**: 30.0 minutos.
+- **Escalado**: no.
+- **Correcciones**: ninguna
+- **Notas**: Sincronizacion root<->template implementada (politica: template canonico). verify_opencode.py ampliado con verify_sync. verify_wheel.py ampliado a 12 recursos (5 originales + 7 de la capa OpenCode). Tests E2E para new_project ampliados. Sin bump todavia. Conteo real de tests por archivo (verificado con `pytest --collect-only -q`): tests/test_new_project.py: 35; tests/test_record_evaluation.py: 29; tests/test_verify_opencode.py: 43; tests/test_verify_wheel.py: 8; total: 115.
+
+### 2026-07-23 — Correcciones finales v0.3.2: 8/8, repo_root robusto, evaluación atómica
+
+- **Modelo**: `opencode/deepseek-v4-flash-free`.
+- **Proveedor**: `OpenCode / DeepSeek`.
+- **Agente**: `implementer`.
+- **Tarea**: Correcciones finales v0.3.2 antes del bump: resumen 8/8, repo_root sin cwd, tests de heading incorrecto y node:http, evaluación atómica con try/finally.
+- **Resultado**: `approved-with-minor-changes`.
+- **Duración**: no registrada.
+- **Escalado**: no.
+- **Correcciones**: se corrigieron dos falsos positivos del /review previo: (1) el heading con `# ` (nivel 1) **ya fallaba** por ausencia en la lista de `## `, se añadió test hermético; (2) el job `package` de CI **ya ejecuta** `verify_wheel.py`, no requiere activación manual. Se añadieron tests de interrupción (KeyboardInterrupt) y fallo en `append_entry`. Se renombró la resolución de raíz a función pública `resolve_repo_root()` para cumplir pyright strict. Queda v0.3.2 "En revisión" como especifica el plan de cierre.
+- **Notas**: verify_opencode.py ahora usa `TOTAL_OK_CHECKS = 8` y `resolve_repo_root()` desde `Path(__file__).resolve().parents[2]`. `append_entry` usa `try/finally` en lugar de `except/raise` para cubrir KeyboardInterrupt. Total de tests: 121 (35+31+47+8).

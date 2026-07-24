@@ -16,13 +16,14 @@ Invocar sin argumentos. El comando se ejecuta desde la raíz del repositorio.
    uv run python tools/ai/verify.py
    ```
 
-   Detrás de este comando se ejecutan, en este orden, los cuatro gates
+   Detrás de este comando se ejecutan, en este orden, los cinco gates
    obligatorios:
 
    - `uv run ruff check .`
    - `uv run ruff format --check .`
    - `uv run pyright`
    - `uv run pytest`
+   - `uv run python tools/ai/verify_opencode.py`
 
    El script se detiene al primer fallo y propaga su `exit code`.
 
@@ -38,6 +39,16 @@ Invocar sin argumentos. El comando se ejecuta desde la raíz del repositorio.
    `verify_wheel.py` confirma que `pyproject.toml`, `__version__`, el
    nombre del wheel y `METADATA Version` coinciden, y que el wheel
    contiene los cinco recursos obligatorios de la plantilla.
+
+   El quinto gate `verify_opencode.py` valida, además del código
+   Python, los artefactos de OpenCode vigentes:
+   `src/python_ai_template/template/.opencode/plugins/structured-compaction.ts`
+   (imports, hook, `output.context.push`, ausencia de filesystem,
+   shell, red, logging y persistencia), los archivos
+   `.opencode/agents/scout.md`, `.opencode/commands/review.md`,
+   `.opencode/commands/handoff.md`,
+   `.opencode/skills/context-handoff/SKILL.md`, y los 10 encabezados
+   canónicos de `docs/current-state.md` en orden estricto.
 
 3. Capturar el resultado de cada paso.
 4. Si todos pasan, declarar el cambio verificado y mostrar un resumen breve.

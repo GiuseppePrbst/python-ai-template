@@ -3,14 +3,23 @@
 Lista priorizada de tareas pendientes. Se actualiza con `/handoff` y se
 revisa al inicio de cada sesion junto con `docs/current-state.md`.
 
+## En revision
+
+- **v0.3.2 — implementacion local en revision** (ADR-013). Estado:
+  codigo, tests, ADR-013 y documentacion redactados. Los cinco
+  quality gates pasan localmente. **No se considera cerrada** hasta
+  completar, en este orden: `/review` aprobado; bump `0.3.1` ->
+  `0.3.2`; cinco gates finales en verde; CI remota aprobada; tag
+  `v0.3.2`; instalacion desde tag validada. Mientras tanto, la unidad
+  puede revertirse sin perdida de historial.
+
 ## Completadas recientemente
 
 - Capa de exploracion y compactacion v0.3.1 (ADR-012): agente `scout`,
   comando `/review` manual, skill `context-handoff`, plugin
-  `structured-compaction`, version bump `0.3.0` -> `0.3.1`. Sesiones
-  interactivas reales de `scout` y `/review` ejecutadas y documentadas.
-  Pendiente solo: commit del conjunto, tag `v0.3.1` y confirmacion
-  remota en CI.
+  `structured-compaction`, version bump `0.3.0` -> `0.3.1`. CI remota
+  aprobada. Tag `v0.3.1` publicado. Instalacion desde tag validada.
+  Working tree limpio al cierre. Cerrada.
 - CI hardening operativo v0.3.0 (ADR-011, scripts `tools/ai/verify.py`
   y `tools/ai/verify_wheel.py`, workflow `.github/workflows/ci.yml`,
   documentacion asociada). CI remoto aprobado (run `30041232754`).
@@ -19,7 +28,10 @@ revisa al inicio de cada sesion junto con `docs/current-state.md`.
 
 ## Alta prioridad
 
-- (vacio)
+- Cerrar v0.3.2: `/review` -> bump `0.3.1` -> `0.3.2` -> cinco gates
+  -> CI remota -> tag -> instalacion desde tag. Ver bloque "En
+  revision" arriba.
+  aprobado.
 
 ## Prioridad media
 
@@ -29,6 +41,11 @@ revisa al inicio de cada sesion junto con `docs/current-state.md`.
   anexa a `output.context`, no escribe, no usa shell, no genera logs)
   y la realidad, incluyendo el caso "hook no disponible", que
   requeriria una nueva ADR.
+- Ejecutar `/compact-test` sobre el plugin vigente y registrar el
+  resultado con `record_evaluation.py`. Si la compactacion no se
+  dispara por umbral ni por comando soportado, registrar
+  `inconclusive`. Repetir tras cualquier cambio al plugin o al
+  formato canonico de `current-state.md`.
 
 ## Prioridad baja
 
@@ -54,30 +71,20 @@ revisa al inicio de cada sesion junto con `docs/current-state.md`.
   inyecciones en lugar de multiplicar `output.context.push(...)` desde
   el plugin.
 
-## Trabajo posterior (no incluido en v0.3.1)
+## Trabajo posterior (no incluido en v0.3.2)
 
-- Incorporar la validacion estatica del plugin (greps de
-  `node:fs`, `output.context.push`, `output.prompt =`) al job
-  `quality` de `.github/workflows/ci.yml` o a un paso separado
-  en el job `package`.
-- Evaluar un limite de extension mas estricto para la respuesta del
-  agente `scout` (la sesion real mostro tendencia a respuestas mas
-  extensas de lo compacto deseado). Si persiste, anadir una directiva
-  de longitud maxima en `.opencode/agents/scout.md`.
-- Revisar los permisos heterogeneos (`0600` vs `0644`) de los
-  archivos existentes en `.opencode/agents/` y normalizar si procede.
-- Evaluar si los IDs de sesion de OpenCode deben documentarse solo en
-  `docs/ai/evaluations.md` y omitirse de `docs/current-state.md` para
-  mantener el handoff libre de detalles de entorno.
-- Pre-commit: queda fuera de alcance del hardening operativo v0.3.0 y
-  de la capa de exploracion v0.3.1. Si en el futuro se justifica,
-  abordarlo en una ADR propia, evaluando secret scanning, formato
-  automatico y ganchos sobre `tools/ai/`, `pyproject.toml` y
-  `.github/workflows/`.
-- Cavemem, OpenRouter, Caveman, Ponytail Ultra y routing adaptativo:
-  fuera de alcance de v0.3.1. Cualquier integracion futura con
-  proveedores o almacenes de memoria requiere una ADR propia y
-  actualizacion de `docs/ai/model-policy.md`.
+- Telemetria externa y routing adaptativo siguen fuera de alcance.
+  Cualquier integracion futura con proveedores o almacenes de
+  memoria requiere una ADR propia y actualizacion de
+  `docs/ai/model-policy.md`.
+- Si en el futuro el plugin `structured-compaction` crece mas alla
+  de la forma estructural protegida por `verify_opencode.py` (mas
+  hooks, mas imports, logica dinamica), evaluar si conviene
+  actualizar el validador o dividirlo en modulos por hook.
+- Si OpenCode 1.18.4 expone un mecanismo soportado y verificable
+  para forzar compactacion, evaluar la automatizacion parcial de
+  `/compact-test` y documentarlo en una nueva ADR sin reintroducir
+  dependencias externas.
 
 ## Backlog
 

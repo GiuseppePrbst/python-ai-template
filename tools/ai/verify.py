@@ -1,12 +1,14 @@
 """Orquestador local de los quality gates de ``python-ai-template``.
 
-Ejecuta, en este orden y deteniendose al primer fallo, los cuatro comandos
-canonicos declarados en ``AGENTS.md`` y en ``docs/decisions.md`` (ADR-007):
+Ejecuta, en este orden y deteniendose al primer fallo, los cinco comandos
+canonicos declarados en ``AGENTS.md`` y en ``docs/decisions.md`` (ADR-007,
+ADR-013):
 
     1. ``uv run ruff check .``
     2. ``uv run ruff format --check .``
     3. ``uv run pyright``
     4. ``uv run pytest``
+    5. ``uv run python tools/ai/verify_opencode.py``
 
 Cada gate se invoca con ``subprocess.run`` recibiendo una lista de argumentos
 (lista, sin ``shell=True`` y sin ``capture_output``), de forma que la salida
@@ -44,6 +46,10 @@ GATES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "pytest",
         ("uv", "run", "pytest"),
+    ),
+    (
+        "verify_opencode",
+        ("uv", "run", "python", "tools/ai/verify_opencode.py"),
     ),
 )
 
