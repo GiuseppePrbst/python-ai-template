@@ -5,13 +5,13 @@ revisa al inicio de cada sesion junto con `docs/current-state.md`.
 
 ## En revision
 
-- **v0.3.2 — implementacion local en revision** (ADR-013). Estado:
-  codigo, tests, ADR-013 y documentacion redactados. Los cinco
-  quality gates pasan localmente. **No se considera cerrada** hasta
-  completar, en este orden: `/review` aprobado; bump `0.3.1` ->
-  `0.3.2`; cinco gates finales en verde; CI remota aprobada; tag
-  `v0.3.2`; instalacion desde tag validada. Mientras tanto, la unidad
-  puede revertirse sin perdida de historial.
+- **v0.3.2 — implementacion local completada** (ADR-013). Codigo
+  commitado en `aea6630` con version `0.3.2`. Los cinco quality gates
+  pasan localmente (121 tests, 8/8 invariantes). Wheel verificado con
+  12 recursos. **No se considera cerrada** hasta completar, en este
+  orden: CI remota aprobada; tag `v0.3.2`; instalacion desde tag
+  validada. Mientras tanto, el commit puede revertirse sin perdida de
+  historial.
 
 ## Completadas recientemente
 
@@ -28,10 +28,10 @@ revisa al inicio de cada sesion junto con `docs/current-state.md`.
 
 ## Alta prioridad
 
-- Cerrar v0.3.2: `/review` -> bump `0.3.1` -> `0.3.2` -> cinco gates
-  -> CI remota -> tag -> instalacion desde tag. Ver bloque "En
-  revision" arriba.
-  aprobado.
+- Cerrar v0.3.2: (hecho: `/review`, bump `0.3.1` -> `0.3.2`, cinco
+  gates, tests 121, wheel 12 recursos, commit `aea6630`). Pendiente:
+  CI remota -> tag -> instalacion desde tag. Ver bloque "En revision"
+  arriba.
 
 ## Prioridad media
 
