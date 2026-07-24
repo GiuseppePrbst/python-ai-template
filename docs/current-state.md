@@ -1,141 +1,96 @@
 # Estado actual
 
-Estado del repositorio al cierre de la sesión v0.3.2. Este archivo se reescribe con `/handoff` al final de cada bloque de trabajo siguiendo el formato canónico definido en la skill `context-handoff`. Permite retomar el trabajo sin la conversación previa.
+Estado del repositorio tras el cierre de v0.3.2. Este archivo se reescribe con `/handoff` al final de cada bloque de trabajo siguiendo el formato canónico definido en la skill `context-handoff`. Permite retomar el trabajo sin la conversación previa.
 
 ## Objetivo actual
 
-Cerrar v0.3.2 (ADR-013): hardening de agentes y línea base de evaluación. El código está commitado en `aea6630` con versión `0.3.2`, los cinco quality gates pasan localmente (121 tests, 8/8 invariantes), el wheel se verifica con 12 recursos. Pendiente: CI remota, tag e instalación desde tag.
+v0.3.2 cerrada. Hardening de agentes y línea base de evaluación (ADR-013) publicado: CI remota aprobada (run `30058735050`), tag `v0.3.2` publicado, instalación desde tag validada. Planificar la unidad posterior sin implementar Cavemem.
 
 ## Estado de la tarea
 
-- Versión vigente: `0.3.2` en las cuatro fuentes (`pyproject.toml`, `__init__.py`, nombre del wheel, METADATA).
-- Último commit: `aea6630` ("feat: add agent hardening and evaluation baseline"). Working tree: limpio. Branch: `main`, up to date con `origin/main`.
-- **Entregables de v0.3.2 entregados y commitados:**
-  - `tools/ai/verify_opencode.py`: quinto gate, inspecciona plugin, artefactos, headings y sync root↔template. 8 invariantes. Resumen `8/8`.
-  - `tools/ai/record_evaluation.py`: registrador manual opt-in sin red. Escritura atómica con `try/finally` que cubre KeyboardInterrupt.
-  - `.opencode/commands/compact-test.md`: comando para prueba manual controlada de compactación.
-  - `tests/test_verify_opencode.py`: 47 tests herméticos (4 añadidos en esta sesión: `resolve_repo_root`, `wrong_heading_level`, `forbidden_http_module`, `plugin_forbidden_import_network`).
-  - `tests/test_record_evaluation.py`: 31 tests herméticos (2 añadidos: limpieza de `.tmp` ante fallo y KeyboardInterrupt).
-  - `tests/test_verify_wheel.py` ampliado a 12 recursos obligatorios.
-  - `tests/test_new_project.py` ampliado con 7 artefactos OpenCode.
-  - ADR-013 documentada en `docs/decisions.md`.
-  - `docs/todos.md` actualizado con cadena de cierre.
-- **Correcciones aplicadas en esta sesión:**
-  - Resumen 8/8 derivado de `TOTAL_OK_CHECKS = 8`.
-  - `resolve_repo_root()` pública desde `Path(__file__).resolve().parents[2]`, sin depender de `Path.cwd()`.
-  - `append_entry` refactorizado a `try/finally` para limpieza en KeyboardInterrupt y fallos.
-  - Falsos positivos del `/review` corregidos en `docs/ai/evaluations.md`.
+- **v0.3.2**: cerrada.
+- Versión publicada: `0.3.2` en las cuatro fuentes (`pyproject.toml`, `__init__.py`, nombre del wheel, METADATA).
+- Commit funcional: `aea6630` ("feat: add agent hardening and evaluation baseline").
+- Commit de release: `f063fe2` ("chore: release python-ai-template 0.3.2").
+- Tag remoto: `v0.3.2` apunta a `f063fe2`.
+- CI final: run `30058735050` — jobs `quality` (Python 3.12 y 3.14) y `package` aprobados.
+- Instalación desde tag: validada. `new-python-project --version` devolvió `0.3.2`. `new-python-project --help` funcionó. Proyecto temporal generado correctamente.
+- Los siete artefactos OpenCode distribuidos quedaron presentes en el proyecto generado.
+- Herramienta desinstalada correctamente tras la validación.
+- Working tree: limpio. Branch: `main`, up to date con `origin/main`.
 
 ## Hechos verificados
 
-- `git status --short` → sin cambios (working tree limpio).
-- `git diff --stat` → 16 archivos modificados, +416/-72 (desde el commit base).
-- `git log --oneline -10` → el último commit `aea6630` es el de v0.3.2.
-- `uv run python tools/ai/verify.py` → `OK: los 5 quality gates han pasado.`
-  - `ruff check` → All checks passed.
-  - `ruff format --check` → 12 files already formatted.
-  - `pyright` → 0 errors, 0 warnings, 0 informations.
-  - `pytest` → 121 passed.
-  - `verify_opencode` → `OK: invariantes verificados (8/8)`.
-- `uv run pytest --collect-only -q` → 121 tests collected.
-  - tests/test_new_project.py: 35
-  - tests/test_record_evaluation.py: 31
-  - tests/test_verify_opencode.py: 47
-  - tests/test_verify_wheel.py: 8
-- `rm -rf dist && uv build` → `python_ai_template-0.3.2-py3-none-any.whl`, `python_ai_template-0.3.2.tar.gz`.
-- `uv run python tools/ai/verify_wheel.py` → `OK: wheel verificado correctamente.` 4 fuentes de versión en `0.3.2`, 12 recursos obligatorios presentes.
-- `cmp .opencode/.../structured-compaction.ts src/.../template/.../structured-compaction.ts` → plugin idéntico byte a byte.
-- `git diff --check` → limpio (sin whitespace problemático).
+- `git log --oneline -10` incluye `f063fe2` (release) y `aea6630` (feat).
+- `git status --short` → sin cambios.
+- Tag `v0.3.2` existe en remoto y apunta a `f063fe2`.
+- CI run `30058735050`: jobs `quality` 3.12, `quality` 3.14 y `package` aprobados.
+- `uv tool install ...` desde el tag remoto: exitoso.
+- `new-python-project --version` → `0.3.2`.
+- `new-python-project --help` → ayuda impresa sin errores.
+- Proyecto temporal generado contenía los 7 artefactos OpenCode distribuidos.
+- `uv tool uninstall python-ai-template`: exitoso.
 - No existen secretos, claves, tokens, endpoints privados ni datos personales en ningún archivo de esta unidad.
-- `resolve_repo_root()` devuelve la raíz real del repositorio independientemente del `cwd`.
 
 ## Decisiones adoptadas
 
-- **ADR-013**: línea base de hardening y evaluación. Agrega quinto gate (`verify_opencode.py`), registrador manual (`record_evaluation.py`), comando `/compact-test`, presupuesto contractual del scout, política canónica de distribución (template como fuente), sync obligatorio root↔template, 12 recursos en el wheel, 4 artefactos OpenCode en el template distribuido. Sin telemetría externa, sin routing adaptativo, sin dependencias de runtime.
-- **TOTAL_OK_CHECKS = 8**: el resumen del validador deriva el conteo de una constante única (no duplicada en el mensaje).
-- **resolve_repo_root() pública**: la función de resolución de raíz es pública para permitir tests y uso desde fuera del módulo, satisfaciendo pyright strict.
-- **try/finally en append_entry**: cubre KeyboardInterrupt y cualquier excepción sin capturar BaseException.
-- **No se añadió Cavemem, OpenRouter, Caveman, Ponytail Ultra ni routing adaptativo**: fuera del alcance de v0.3.2.
-- **No se añadió telemetría externa, envío de métricas, ni extracción de tokens**: documentado en ADR-013.
+- **ADR-013** (v0.3.2): hardening de agentes y línea base de evaluación. Cerrada y publicada.
+- **ADR-012** (v0.3.1): capa de exploración y compactación. Cerrada en release anterior.
+- **ADR-011** (v0.3.0): CI reproducible. Cerrada en release anterior.
 
 ## Archivos modificados
 
-Desde el commit base `49dfcde` (v0.3.1), el diff acumulado de v0.3.2 incluye 25 archivos (+3593/-69). Los archivos modificados en esta sesión de correcciones (sobre el commit `d87abbb` intermedio):
-
-| Archivo | Cambio |
-|---------|--------|
-| `tools/ai/verify_opencode.py` | (creado) +847 líneas. Constante `TOTAL_OK_CHECKS`, función `resolve_repo_root()`, resumen `8/8` |
-| `tools/ai/record_evaluation.py` | (creado) +361 líneas. `append_entry` con `try/finally`, limpieza de `.tmp` en KeyboardInterrupt |
-| `tests/test_verify_opencode.py` | (creado) +685 líneas. 47 tests incluyendo `resolve_repo_root`, `wrong_heading_level`, `forbidden_http_module` |
-| `tests/test_record_evaluation.py` | (creado) +411 líneas. 31 tests incluyendo limpieza de `.tmp` en fallo e interrupción |
-| `docs/ai/evaluations.md` | (modificado) Nueva entrada documentando correcciones finales y falsos positivos |
-| `pyproject.toml` | (modificado) `version = "0.3.2"`, `extraPaths = ["src", "tools/ai"]` |
-| `src/python_ai_template/__init__.py` | (modificado) `__version__ = "0.3.2"` |
-| `uv.lock` | (modificado) regenerado: `v0.3.1 -> v0.3.2` |
-
-Los 17 archivos restantes de v0.3.2 (scout, review, handoff, verify, compact-test, structured-compaction.ts, SKILL.md, AGENTS.md, docs/architecture.md, docs/decisions.md, docs/todos.md, docs/ai/context-policy.md, tests/test_new_project.py, tests/test_verify_wheel.py, tools/ai/verify.py, tools/ai/verify_wheel.py) fueron entregados y commitados en `aea6630`.
-
-No se modificaron: `src/python_ai_template/generator.py`, `tools/new_project.py`, `.github/workflows/ci.yml`, `README.md`, `docs/glossary.md`, `docs/mistakes.md`.
+Working tree limpio. Ningún cambio sin commitear respecto al tag `v0.3.2`.
 
 ## Validaciones ejecutadas
 
-### Gates locales (ejecutados en esta sesión)
+### CI remota (run `30058735050`)
 
-| Gate | Comando | Resultado |
-|------|---------|-----------|
-| ruff check | `uv run ruff check .` | All checks passed |
-| ruff format --check | `uv run ruff format --check .` | 12 files already formatted |
-| pyright | `uv run pyright` | 0 errors, 0 warnings, 0 informations |
-| pytest | `uv run pytest` | 121 passed |
-| verify_opencode | `uv run python tools/ai/verify_opencode.py` | OK: invariantes verificados (8/8) |
-| orquestador completo | `uv run python tools/ai/verify.py` | OK: los 5 quality gates han pasado |
+| Job | Estado |
+|-----|--------|
+| `quality` (Python 3.12) | aprobado |
+| `quality` (Python 3.14) | aprobado |
+| `package` | aprobado |
 
-### Wheel
+### Validación local desde tag remoto
 
 | Comando | Resultado |
 |---------|-----------|
-| `rm -rf dist && uv build` | `python_ai_template-0.3.2-py3-none-any.whl`, `python_ai_template-0.3.2.tar.gz` |
-| `uv run python tools/ai/verify_wheel.py` | OK: 4 fuentes coinciden en 0.3.2, 12 recursos presentes |
-| `cmp` plugin root↔template | byte a byte idéntico |
+| `uv tool install python-ai-template --from https://github.com/...` | exitoso |
+| `new-python-project --version` | `0.3.2` |
+| `new-python-project --help` | ayuda impresa |
+| proyecto generado: 7 artefactos OpenCode | presentes |
+| `uv tool uninstall python-ai-template` | exitoso |
 
-### Inventario Git
+### Gates locales (última ejecución conocida, working tree limpio)
 
-| Comando | Resultado |
-|---------|-----------|
-| `git status --short` | sin cambios, working tree limpio |
-| `git diff --stat` | 16 archivos, +416/-72 (v0.3.2 completo) |
-| `git diff --check` | limpio |
-| `git log --oneline -10` | último commit `aea6630` v0.3.2 |
+| Gate | Resultado |
+|------|-----------|
+| `ruff check` | All checks passed |
+| `ruff format --check` | 12 files already formatted |
+| `pyright` | 0 errors, 0 warnings, 0 informations |
+| `pytest` | 121 passed |
+| `verify_opencode` | OK: invariantes verificados (8/8) |
+| `uv build && verify_wheel.py` | OK: 0.3.2, 12 recursos |
 
 ### No ejecutados en esta sesión
 
-- CI remota (GitHub Actions): el commit `aea6630` está en `main` local pero no se ha hecho push a `origin/main`.
-- Tag `v0.3.2`: no creado.
-- Instalación desde tag: no ejecutada (depende del tag).
-- Compactación real disparada por OpenCode: sigue pendiente (no ha cambiado desde v0.3.1).
-- `/compact-test`: no ejecutado en esta sesión.
+- Compactación real disparada por OpenCode por umbral: experimental, pendiente desde v0.3.1. No se ha provocado en ninguna sesión.
 
 ## Errores pendientes
 
-- **Ninguno bloqueante.** Los cinco quality gates pasan localmente. No hay regresiones.
-- **Carácter experimental del hook** `experimental.session.compacting` en OpenCode 1.18.4: no ha cambiado desde v0.3.1. Si una versión futura renombra el hook o cambia su firma, el plugin dejará de registrar el callback de forma silenciosa. ADR-012 lo documenta.
-- **Validación del plugin en sesión interactiva larga**: la compactación real por umbral no se ha disparado en ninguna sesión. Pendiente desde v0.3.1.
+- **Ninguno bloqueante.** v0.3.2 cerrada sin regresiones.
+- **Carácter experimental del hook** `experimental.session.compacting`: riesgo conocido desde ADR-012. El plugin puede dejar de registrar el callback si OpenCode renombra o elimina el hook experimental.
+- **Compactación real por umbral**: no se ha disparado ni verificado empíricamente en ninguna sesión. Sigue siendo el riesgo abierto principal del plugin.
 
 ## Enfoques rechazados y motivo
 
-- **Leer `docs/current-state.md` desde el plugin**: rechazado por "no usa filesystem". El plugin es estático (ADR-012).
-- **Automatizar `/review` mediante hooks**: rechazado porque OpenCode 1.18.4 solo expone `command.execute.before`, no `after`.
-- **Usar `tsc`/`npx`/toolchain temporal**: rechazado por el principio de cambio mínimo en la cadena de herramientas.
-- **Cavemem, OpenRouter, routing adaptativo, telemetría externa**: rechazados en v0.3.2; fuera del alcance (ADR-013).
-- **Persistir resumen de compactación en disco desde el plugin**: rechazado (ADR-012).
-- **Reemplazar `output.prompt`**: rechazado (ADR-012: el plugin es auxiliar, no autoridad).
-- **`Path.cwd()` como raíz implícita en el validador**: rechazado y corregido por `resolve_repo_root()` desde `__file__`.
-- **`except Exception` en `append_entry`**: rechazado y reemplazado por `try/finally` para cubrir KeyboardInterrupt.
+- (ninguno nuevo en esta sesión de cierre; los enfoques rechazados de v0.3.1 y v0.3.2 están documentados en handoffs anteriores).
 
 ## Divergencias detectadas
 
-- **Ninguna** al cierre de esta sesión. El código commitado refleja el estado documentado en `docs/`, y los gates confirman coherencia.
+- **Ninguna.** El código commitado, el tag publicado y la documentación están alineados.
 
 ## Siguiente acción concreta
 
-Cuando el usuario lo autorice, hacer push de `main` a `origin/main` para disparar CI remota; si CI pasa, crear el tag `v0.3.2` (`git tag v0.3.2 && git push origin v0.3.2`); instalar localmente con `uv tool install .` y validar que `new-python-project --version` devuelve `0.3.2`. Luego mover v0.3.2 de "En revisión" a "Completadas recientemente → Cerrada" en `docs/todos.md`.
+Planificar la unidad posterior a v0.3.2. No implementar Cavemem, OpenRouter, routing adaptativo ni telemetría externa sin una ADR propia. Considerar si la próxima unidad aborda la compactación experimental, la automatización parcial de `/compact-test`, o tareas de mantenimiento del backlog.

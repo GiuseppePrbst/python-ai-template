@@ -3,18 +3,15 @@
 Lista priorizada de tareas pendientes. Se actualiza con `/handoff` y se
 revisa al inicio de cada sesion junto con `docs/current-state.md`.
 
-## En revision
-
-- **v0.3.2 — implementacion local completada** (ADR-013). Codigo
-  commitado en `aea6630` con version `0.3.2`. Los cinco quality gates
-  pasan localmente (121 tests, 8/8 invariantes). Wheel verificado con
-  12 recursos. **No se considera cerrada** hasta completar, en este
-  orden: CI remota aprobada; tag `v0.3.2`; instalacion desde tag
-  validada. Mientras tanto, el commit puede revertirse sin perdida de
-  historial.
-
 ## Completadas recientemente
 
+- **v0.3.2 — hardening de agentes y línea base de evaluación**
+  (ADR-013). CI remota aprobada (run `30058735050`, jobs quality 3.12,
+  quality 3.14 y package). Tag `v0.3.2` publicado (apunta a
+  `f063fe2`). Instalación desde tag validada:
+  `new-python-project --version` devuelve `0.3.2`, proyecto generado
+  con 7 artefactos OpenCode distribuidos. Herramienta desinstalada
+  correctamente. Working tree limpio al cierre. Cerrada.
 - Capa de exploracion y compactacion v0.3.1 (ADR-012): agente `scout`,
   comando `/review` manual, skill `context-handoff`, plugin
   `structured-compaction`, version bump `0.3.0` -> `0.3.1`. CI remota
@@ -25,13 +22,6 @@ revisa al inicio de cada sesion junto con `docs/current-state.md`.
   documentacion asociada). CI remoto aprobado (run `30041232754`).
   Tag `v0.3.0` creado, instalacion local desde tag validada,
   `new-python-project --version` devuelve `0.3.0`. Cerrada.
-
-## Alta prioridad
-
-- Cerrar v0.3.2: (hecho: `/review`, bump `0.3.1` -> `0.3.2`, cinco
-  gates, tests 121, wheel 12 recursos, commit `aea6630`). Pendiente:
-  CI remota -> tag -> instalacion desde tag. Ver bloque "En revision"
-  arriba.
 
 ## Prioridad media
 

@@ -372,3 +372,15 @@ No se registran impresiones generales: solo experimentos comparables con una tar
 - **Escalado**: no.
 - **Correcciones**: se corrigieron dos falsos positivos del /review previo: (1) el heading con `# ` (nivel 1) **ya fallaba** por ausencia en la lista de `## `, se añadió test hermético; (2) el job `package` de CI **ya ejecuta** `verify_wheel.py`, no requiere activación manual. Se añadieron tests de interrupción (KeyboardInterrupt) y fallo en `append_entry`. Se renombró la resolución de raíz a función pública `resolve_repo_root()` para cumplir pyright strict. Queda v0.3.2 "En revisión" como especifica el plan de cierre.
 - **Notas**: verify_opencode.py ahora usa `TOTAL_OK_CHECKS = 8` y `resolve_repo_root()` desde `Path(__file__).resolve().parents[2]`. `append_entry` usa `try/finally` en lugar de `except/raise` para cubrir KeyboardInterrupt. Total de tests: 121 (35+31+47+8).
+
+### 2026-07-23 — Validación final v0.3.2 desde tag remoto
+
+- **Modelo**: `opencode/deepseek-v4-flash-free`.
+- **Proveedor**: `OpenCode / DeepSeek`.
+- **Agente**: `implementer`.
+- **Tarea**: Cierre remoto de v0.3.2: validar CI, tag, instalación desde tag y distribución de 7 artefactos OpenCode.
+- **Resultado**: `approved`.
+- **Duración**: no registrada.
+- **Escalado**: no.
+- **Correcciones**: ninguna
+- **Notas**: CI run `30058735050` con jobs quality 3.12, quality 3.14 y package aprobados. Tag `v0.3.2` publicado y apunta a `f063fe2`. Instalación desde tag remoto validada: `new-python-project --version` devuelve `0.3.2`, `--help` funciona, proyecto temporal generado contiene los 7 artefactos OpenCode distribuidos (scout, compact-test, handoff, review, verify, structured-compaction.ts, context-handoff/SKILL.md). Herramienta desinstalada correctamente. Compactación real por umbral sigue experimental y no se verificó en esta sesión. v0.3.2 cerrada.
