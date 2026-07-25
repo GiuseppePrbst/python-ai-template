@@ -59,8 +59,8 @@ def _write_minimal_wheel(
 
 
 def test_required_resources_count() -> None:
-    """12 recursos: 5 originales + 7 de la capa de exploracion."""
-    assert len(vw.REQUIRED_RESOURCES) == 12
+    """14 recursos: 5 originales + 7 de la capa de exploracion + 2 fixtures."""
+    assert len(vw.REQUIRED_RESOURCES) == 14
 
 
 def test_required_resources_includes_seven_opencode() -> None:
@@ -75,6 +75,61 @@ def test_required_resources_includes_seven_opencode() -> None:
     )
     for suffix in expected_suffixes:
         assert any(r.endswith(suffix) for r in vw.REQUIRED_RESOURCES), suffix
+
+
+def test_required_resources_includes_compaction_checkpoint() -> None:
+    """El path del fixture checkpoint esta en REQUIRED_RESOURCES."""
+    expected = "python_ai_template/template/.opencode/fixtures/compaction-checkpoint.md"
+    assert expected in vw.REQUIRED_RESOURCES, (
+        f"REQUIRED_RESOURCES no contiene {expected!r}; actual: "
+        f"{list(vw.REQUIRED_RESOURCES)}"
+    )
+
+
+def test_required_resources_includes_compaction_filler() -> None:
+    """El path del fixture filler esta en REQUIRED_RESOURCES."""
+    expected = "python_ai_template/template/.opencode/fixtures/compaction-filler.md"
+    assert expected in vw.REQUIRED_RESOURCES, (
+        f"REQUIRED_RESOURCES no contiene {expected!r}; actual: "
+        f"{list(vw.REQUIRED_RESOURCES)}"
+    )
+
+
+def test_required_resources_missing_compaction_checkpoint_fails(
+    tmp_path: Path,
+) -> None:
+    """Si el fixture checkpoint falta del wheel, check_required_resources
+    emite la ruta como ausente. No ejecuta uv build; construye un wheel
+    sintetico con zipfile."""
+    wheel = tmp_path / "wheel.whl"
+    _write_minimal_wheel(
+        wheel,
+        missing={
+            "python_ai_template/template/.opencode/fixtures/compaction-checkpoint.md"
+        },
+    )
+    missing = vw.check_required_resources(wheel)
+    assert (
+        "python_ai_template/template/.opencode/fixtures/compaction-checkpoint.md"
+        in missing
+    ), f"se esperaba que el fixture checkpoint apareciera como ausente: {missing}"
+
+
+def test_required_resources_missing_compaction_filler_fails(
+    tmp_path: Path,
+) -> None:
+    """Si el fixture filler falta del wheel, check_required_resources
+    emite la ruta como ausente. No ejecuta uv build; construye un wheel
+    sintetico con zipfile."""
+    wheel = tmp_path / "wheel.whl"
+    _write_minimal_wheel(
+        wheel,
+        missing={"python_ai_template/template/.opencode/fixtures/compaction-filler.md"},
+    )
+    missing = vw.check_required_resources(wheel)
+    assert (
+        "python_ai_template/template/.opencode/fixtures/compaction-filler.md" in missing
+    ), f"se esperaba que el fixture filler apareciera como ausente: {missing}"
 
 
 def test_check_required_resources_ok(tmp_path: Path) -> None:

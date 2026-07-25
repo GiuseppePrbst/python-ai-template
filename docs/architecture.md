@@ -273,6 +273,20 @@ compone de tres piezas:
   no se dispara por umbral ni por comando soportado, el resultado se
   clasifica como `inconclusive` y se registra igualmente.
 
+  El comando trabaja sobre los **fixtures distribuidos** en
+  `.opencode/fixtures/`:
+  - `compaction-checkpoint.md`: 10 headings canónicos + 11
+    marcadores literales (`OBJECTIVE-01` ... `NEXT-01`).
+    Completamente sintético, sin referencias al proyecto real.
+  - `compaction-filler.md`: texto metalingüístico neutro, sin
+    marcadores ni términos de estado. Mismo filler para todos los
+    modelos.
+  Ambos viven en `.opencode/fixtures/` (raíz operativa) y en
+  `src/python_ai_template/template/.opencode/fixtures/`
+  (template canónico); los dos pares están en `SYNC_PAIRS` y se
+  distribuyen en el wheel como recursos obligatorios
+  (`REQUIRED_RESOURCES` pasa de 12 a 14 entradas en v0.3.3).
+
 El **scout** además se acota contractualmente: respuesta normal
 aproximadamente ≤ 700 palabras, exploración amplia solicitada
 explícitamente ≤ 1200, máximo 5 riesgos / 5 hipótesis / 5 preguntas

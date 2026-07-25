@@ -322,3 +322,35 @@ Las decisiones no se modifican silenciosamente. Una corrección se hace añadien
   - **El gate no copia ni corrige archivos automáticamente.** Las correcciones se hacen manualmente, normalmente desde la fuente canónica (`template/.opencode/...`) hacia la copia operativa (`.opencode/...`), usando las herramientas de filesystem del desarrollador.
   - Un cambio futuro de esta política (por ejemplo, invertir la dirección de la copia, ampliar el conjunto de pares sincronizados, o introducir auto-sincronización) requiere una **ADR posterior** que la declare como reemplazada, ampliada o revertida.
   - **ADR-013 permanece como registro histórico** aunque el código que introdujo la política sea revertido.
+
+## ADR-014: mantener la compactación estructurada en estado experimental (v0.3.3)
+
+- **Fecha**: 2026-07-24.
+- **Estado**: aceptada.
+- **Contexto**: ADR-012 introdujo el plugin `structured-compaction` como una extensión experimental para aportar contexto estructurado durante la compactación nativa de OpenCode, registrando únicamente el hook `experimental.session.compacting` y anexando una entrada estática a `output.context` sin producir logs, telemetría ni modificaciones al repositorio. ADR-013 añadió la validación estática del plugin y la línea base de evaluación manual con `tools/ai/record_evaluation.py`, manteniendo el plugin en estado experimental. La unidad v0.3.3 distribuye los fixtures sintéticos `compaction-checkpoint.md` y `compaction-filler.md` (10 headings canónicos y 11 marcadores literales en el checkpoint; texto metalingüístico neutro en el filler), amplía `SYNC_PAIRS` de 7 a 9 pares y `REQUIRED_RESOURCES` de 12 a 14, y actualiza el comando `/compact-test` con protocolo acotado (3 ciclos, 20 minutos totales como máximo, detener al confirmar compactación) y rúbrica de cinco niveles. La validación v0.3.3 ejecutó dos corridas controladas del comando `/compact-test`:
+  - `MiniMax-M3` con proveedor `minimax-direct`.
+  - `gpt-5.6-sol` con proveedor `openai`.
+  Ambas agotaron los tres ciclos sin compactación nativa confirmada. No se generó un resumen post-compactación que permitiera evaluar la retención de los headings canónicos, los marcadores literales, las decisiones o la siguiente acción. La retención queda **no evaluable** en ambas corridas. No se observaron cambios en Git atribuibles a las corridas. La causalidad del plugin no es observable directamente porque el plugin no produce logs ni telemetría. ADR-013 prohíbe la medición de tokens y la introducción de telemetría externa, routing automático o dependencias runtime en esta unidad, por lo que añadir instrumentación para forzar observación queda fuera del alcance.
+- **Decisión**:
+  - Mantener el plugin `structured-compaction` en estado experimental.
+  - No promover el plugin a mecanismo validado: no existe evidencia empírica de su efecto en compactación nativa ni en la retención del checkpoint.
+  - No eliminar el plugin por ausencia de evidencia de fallo: las dos corridas controladas no aportaron evidencia de fallo atribuible al plugin.
+  - No ampliar la funcionalidad del plugin en esta unidad: el plugin sigue limitado a una entrada estática en `output.context`, sin lecturas, sin shell, sin red, sin logs y sin persistencia, como fija ADR-012.
+  - No añadir telemetría, persistencia, red, base de datos ni dependencias runtime como parte de esta decisión. ADR-013 sigue vigente y sus limitaciones se aplican plenamente.
+  - Conservar la validación estática del plugin en `tools/ai/verify_opencode.py` como única verificación mecánica del plugin hasta que exista evidencia de comportamiento real.
+- **Alternativas consideradas**:
+  - **Aprobar el plugin como mecanismo validado**: rechazada por falta de evidencia empírica; las dos corridas controladas fueron `inconclusive` y la retención no pudo evaluarse.
+  - **Eliminar el plugin**: rechazada porque no hubo evidencia de fallo atribuible al plugin; suprimirlo sin evidencia contradice el principio de cambio mínimo.
+  - **Añadir instrumentación ahora** (logs, contadores, eventos o almacenamiento local) para forzar observación: rechazada por ampliar el alcance de v0.3.3 y por contradecir ADR-013 (sin telemetría, sin dependencias runtime, sin medición de tokens).
+  - **Mantener el plugin experimental**: aceptada. Es coherente con ADR-012 y ADR-013, refleja la evidencia inconclusa y deja la puerta abierta a una revisión futura cuando exista una señal observable.
+- **Consecuencias**:
+  - El plugin permanece distribuido en la plantilla y en el wheel como recurso obligatorio (`REQUIRED_RESOURCES` pasa de 12 a 14 entradas en v0.3.3).
+  - El plugin continúa sujeto a validación estática por `tools/ai/verify_opencode.py` (quinto gate).
+  - No se afirma que el plugin preserve el checkpoint durante la compactación.
+  - No se afirma que el plugin cause la compactación.
+  - El comportamiento real del plugin no se considera probado.
+  - Las futuras pruebas requerirán una señal observable de compactación o una configuración materialmente distinta.
+  - No se repetirán corridas idénticas del comando `/compact-test` sólo para generar más filler.
+  - La unidad v0.3.3 actualiza `docs/ai/compaction-evaluation.md` (informe comparativo MiniMax/Codex con clasificación `inconclusive` para ambas corridas), `docs/architecture.md` (sección sobre fixtures y `/compact-test`), `docs/todos.md` (registro de la unidad con `release pendiente`), `docs/ai/evaluations.md` (entradas de evaluación de ambas corridas) y `docs/decisions.md` (esta ADR).
+  - No se añaden dependencias de runtime al paquete Python. No se introduce `pre-commit`. No se publica a PyPI ni se crean GitHub Releases.
+- **Reversibilidad**: fácil. Revertir requiere eliminar `docs/ai/compaction-evaluation.md`, los dos pares añadidos a `SYNC_PAIRS` (`fixtures/compaction-checkpoint.md` y `fixtures/compaction-filler.md`) y los dos recursos añadidos a `REQUIRED_RESOURCES`; restaurar el comando `/compact-test` (raíz y template) a su forma previa a v0.3.3; eliminar el archivo independiente de pruebas `tests/test_compaction_fixture.py` y los seis tests de sync de fixtures en `tests/test_verify_opencode.py`. ADR-012, ADR-013 y esta ADR-014 mantendrían su vigencia como registro histórico, y una ADR posterior debería marcar ADR-014 como "Reemplazada por ADR-NNN" o "Revertida por ADR-NNN". El bump de versión se revierte trivialmente con `git revert`; el paquete no tiene cambios funcionales.

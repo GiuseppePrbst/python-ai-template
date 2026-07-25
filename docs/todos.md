@@ -76,6 +76,50 @@ revisa al inicio de cada sesion junto con `docs/current-state.md`.
   `/compact-test` y documentarlo en una nueva ADR sin reintroducir
   dependencias externas.
 
+## v0.3.3 — implementación y evidencia completas; revisión documental completa; ADR-014 aceptado; release pendiente
+
+Estado: **release pendiente**.
+
+- Fixtures distribuidos en `.opencode/fixtures/` y en el template:
+  `compaction-checkpoint.md` (10 headings canónicos + 11 marcadores
+  literales, sintético) y `compaction-filler.md` (texto
+  metalingüístico neutro).
+- `SYNC_PAIRS` ampliado a 9 pares (`TOTAL_OK_CHECKS` se mantiene en
+  8/8). `REQUIRED_RESOURCES` pasa de 12 a 14.
+- `/compact-test` actualizado con protocolo acotado (3 ciclos, 20
+  minutos totales como máximo, detener al confirmar compactación),
+  distinción marcador literal vs contenido semántico, rúbrica de
+  cinco niveles (`approved`, `approved-with-minor-changes`,
+  `changes-required`, `failed`, `inconclusive`) y declaración
+  explícita: la influencia causal del plugin no es observable
+  directamente.
+- Tests herméticos distribuidos en `tests/test_compaction_fixture.py`
+  (11), `tests/test_verify_opencode.py` (6 nuevos sobre sync de
+  fixtures), `tests/test_new_project.py` (3 E2E sobre presencia e
+  identidad de los fixtures en el proyecto generado) y
+  `tests/test_verify_wheel.py` (5 sobre `REQUIRED_RESOURCES`).
+- `docs/architecture.md` actualizado con la nota sobre fixtures.
+- Implementación y evidencia completas: dos corridas controladas del
+  comando `/compact-test` (MiniMax-M3/minimax-direct y
+  gpt-5.6-sol/openai) registradas en `docs/ai/evaluations.md` y
+  reflejadas en `docs/ai/compaction-evaluation.md`. Ambas
+  clasificadas como `inconclusive`.
+- Revisión documental completa: informe comparativo actualizado,
+  tabla comparativa rellenada con valores reales de ambas corridas,
+  incidente operativo preservado y conclusión final sustituyendo a
+  la conclusión provisional.
+- ADR-014 aceptado: el plugin `structured-compaction` se mantiene en
+  estado experimental. ADR archivada en `docs/decisions.md` (ADR-014).
+  No se promueve el plugin a mecanismo validado, no se elimina por
+  ausencia de evidencia de fallo, no se amplía su funcionalidad, y no
+  se añade telemetría, persistencia, red ni dependencias runtime.
+- Release pendiente al cierre: bump `0.3.2` → `0.3.3`,
+  gates finales, build con 14/14 recursos, commit funcional, push,
+  CI remota, documentación de release, segunda CI, tag
+  `v0.3.3`, instalación desde el tag remoto, generación de proyecto
+  con 9 artefactos OpenCode, documentación posterior al tag, CI
+  final, working tree limpio.
+
 ## Backlog
 
 - Decidir si se quiere un test E2E que invoque

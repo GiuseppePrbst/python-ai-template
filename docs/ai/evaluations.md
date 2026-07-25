@@ -384,3 +384,27 @@ No se registran impresiones generales: solo experimentos comparables con una tar
 - **Escalado**: no.
 - **Correcciones**: ninguna
 - **Notas**: CI run `30058735050` con jobs quality 3.12, quality 3.14 y package aprobados. Tag `v0.3.2` publicado y apunta a `f063fe2`. Instalación desde tag remoto validada: `new-python-project --version` devuelve `0.3.2`, `--help` funciona, proyecto temporal generado contiene los 7 artefactos OpenCode distribuidos (scout, compact-test, handoff, review, verify, structured-compaction.ts, context-handoff/SKILL.md). Herramienta desinstalada correctamente. Compactación real por umbral sigue experimental y no se verificó en esta sesión. v0.3.2 cerrada.
+
+### 2026-07-24 — compact-test de structured-compaction v0.3.3 con MiniMax
+
+- **Modelo**: `MiniMax-M3`.
+- **Proveedor**: `minimax-direct`.
+- **Agente**: `implementer`.
+- **Tarea**: compact-test de structured-compaction v0.3.3 con MiniMax.
+- **Resultado**: `inconclusive`.
+- **Duración**: 11.05 minutos.
+- **Escalado**: no.
+- **Correcciones**: La compactacion nativa no se confirmo; no hubo resumen post-compactacion y la retencion no pudo evaluarse.
+- **Notas**: Presupuesto de tres ciclos agotado. Plugin habilitado, pero su influencia causal no es observable. El arbol tenia cambios preexistentes y no aparecieron cambios adicionales atribuibles a la corrida.
+
+### 2026-07-24 — compact-test de structured-compaction v0.3.3 con Codex
+
+- **Modelo**: `gpt-5.6-sol`.
+- **Proveedor**: `openai`.
+- **Agente**: `implementer`.
+- **Tarea**: compact-test de structured-compaction v0.3.3 con Codex.
+- **Resultado**: `inconclusive`.
+- **Duración**: 2.47 minutos.
+- **Escalado**: no.
+- **Correcciones**: La compactacion nativa no se confirmo; no hubo resumen post-compactacion y la retencion no pudo evaluarse.
+- **Notas**: Presupuesto de tres ciclos agotado. Plugin habilitado, pero su influencia causal no es observable. El arbol tenia cambios preexistentes y no aparecieron cambios adicionales atribuibles a la corrida.

@@ -504,3 +504,47 @@ def test_generated_plugin_matches_canonical(tmp_path: Path) -> None:
     assert canonical.is_file()
     assert generated.is_file()
     assert generated.read_bytes() == canonical.read_bytes()
+
+
+# --- Fixtures de compactacion distribuidos en el proyecto generado (v0.3.3) ---
+
+
+# 36. E2E: el proyecto generado contiene el fixture checkpoint.
+def test_generated_project_has_compaction_checkpoint(tmp_path: Path) -> None:
+    dest = tmp_path / "my-project"
+    rc = new_project.generate("My Project", "my_project", dest)
+    assert rc == 0
+    generated = dest / ".opencode" / "fixtures" / "compaction-checkpoint.md"
+    assert generated.is_file(), f"falta en el proyecto generado: {generated}"
+
+
+# 37. E2E: el proyecto generado contiene el fixture filler.
+def test_generated_project_has_compaction_filler(tmp_path: Path) -> None:
+    dest = tmp_path / "my-project"
+    rc = new_project.generate("My Project", "my_project", dest)
+    assert rc == 0
+    generated = dest / ".opencode" / "fixtures" / "compaction-filler.md"
+    assert generated.is_file(), f"falta en el proyecto generado: {generated}"
+
+
+# 38. E2E: los fixtures generados son byte a byte identicos al canonico.
+def test_generated_fixtures_match_canonical(tmp_path: Path) -> None:
+    dest = tmp_path / "my-project"
+    rc = new_project.generate("My Project", "my_project", dest)
+    assert rc == 0
+    template_dir = (
+        Path(__file__).resolve().parent.parent
+        / "src"
+        / "python_ai_template"
+        / "template"
+        / ".opencode"
+        / "fixtures"
+    )
+    for name in ("compaction-checkpoint.md", "compaction-filler.md"):
+        canonical = template_dir / name
+        generated = dest / ".opencode" / "fixtures" / name
+        assert canonical.is_file(), f"canonico ausente: {canonical}"
+        assert generated.is_file(), f"generado ausente: {generated}"
+        assert generated.read_bytes() == canonical.read_bytes(), (
+            f"fixture {name} generado difiere del canonico"
+        )

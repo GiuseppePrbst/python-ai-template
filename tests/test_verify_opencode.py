@@ -93,6 +93,8 @@ def _build_repo(
     verify_text = "# /verify\n"
     skill_text = "# context-handoff\n"
     compact_text = "# /compact-test\n"
+    fixture_checkpoint_text = "# checkpoint sintetico\n"
+    fixture_filler_text = "# filler sintetico\n"
 
     # Escribir en el template (fuente canonica)
     plugin_path = tmp_path / PLUGIN_REPO_PATH
@@ -120,6 +122,15 @@ def _build_repo(
     )
     (tmp_path / CONTEXT_HANDOFF_SKILL_PATH).parent.mkdir(parents=True, exist_ok=True)
     (tmp_path / CONTEXT_HANDOFF_SKILL_PATH).write_text(skill_text, encoding="utf-8")
+    # Fixtures de compactacion (v0.3.3): viven en el template y se sincronizan
+    (tmp_path / FIXTURE_CHECKPOINT_TEMPLATE).parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / FIXTURE_CHECKPOINT_TEMPLATE).write_text(
+        fixture_checkpoint_text, encoding="utf-8"
+    )
+    (tmp_path / FIXTURE_FILLER_TEMPLATE).parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / FIXTURE_FILLER_TEMPLATE).write_text(
+        fixture_filler_text, encoding="utf-8"
+    )
     _write_current_state(tmp_path / CURRENT_STATE_PATH)
 
     if sync:
@@ -678,6 +689,133 @@ def test_verify_plugin_forbidden_import_network(tmp_path: Path) -> None:
     issues = verify_plugin(repo)
     assert any("node:http" in i.message for i in issues), (
         f"se esperaba rechazo de node:http, issues: {issues}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Sync de fixtures de compactacion (v0.3.3)
+# ---------------------------------------------------------------------------
+
+
+FIXTURE_CHECKPOINT_TEMPLATE = (
+    Path("src")
+    / "python_ai_template"
+    / "template"
+    / ".opencode"
+    / "fixtures"
+    / "compaction-checkpoint.md"
+)
+FIXTURE_CHECKPOINT_ROOT = Path(".opencode") / "fixtures" / "compaction-checkpoint.md"
+FIXTURE_FILLER_TEMPLATE = (
+    Path("src")
+    / "python_ai_template"
+    / "template"
+    / ".opencode"
+    / "fixtures"
+    / "compaction-filler.md"
+)
+FIXTURE_FILLER_ROOT = Path(".opencode") / "fixtures" / "compaction-filler.md"
+
+
+def _build_repo_with_fixtures(
+    tmp_path: Path,
+    *,
+    root_diverges: bool = False,
+    root_missing: bool = False,
+    template_missing: bool = False,
+) -> Path:
+    """Crea un repo sintetico con los fixtures en SYNC_PAIRS.
+
+    Por defecto, ambos lados existen y son byte a byte identicos.
+    ``root_diverges=True`` modifica el lado raiz para que difiera.
+    ``root_missing=True`` borra el lado raiz.
+    ``template_missing=True`` borra el lado template.
+    """
+    repo = _build_repo(tmp_path)
+    template_dir = (
+        repo / "src" / "python_ai_template" / "template" / ".opencode" / "fixtures"
+    )
+    root_dir = repo / ".opencode" / "fixtures"
+    template_dir.mkdir(parents=True, exist_ok=True)
+    root_dir.mkdir(parents=True, exist_ok=True)
+
+    if not template_missing:
+        (template_dir / "compaction-checkpoint.md").write_text(
+            "# checkpoint canonico\n", encoding="utf-8"
+        )
+        (template_dir / "compaction-filler.md").write_text(
+            "# filler canonico\n", encoding="utf-8"
+        )
+
+    if not root_missing:
+        if root_diverges:
+            cp_text = "# checkpoint divergente\n"
+            fl_text = "# filler divergente\n"
+        else:
+            cp_text = "# checkpoint canonico\n"
+            fl_text = "# filler canonico\n"
+        (root_dir / "compaction-checkpoint.md").write_text(cp_text, encoding="utf-8")
+        (root_dir / "compaction-filler.md").write_text(fl_text, encoding="utf-8")
+
+    return repo
+
+
+def test_sync_includes_compaction_checkpoint() -> None:
+    """El par fixtures/compaction-checkpoint.md esta declarado en SYNC_PAIRS."""
+    pairs = [(a, b) for a, b in SYNC_PAIRS]
+    assert any(
+        str(a) == str(FIXTURE_CHECKPOINT_ROOT)
+        and str(b) == str(FIXTURE_CHECKPOINT_TEMPLATE)
+        for a, b in pairs
+    ), "el par fixtures/compaction-checkpoint.md no esta en SYNC_PAIRS"
+
+
+def test_sync_includes_compaction_filler() -> None:
+    """El par fixtures/compaction-filler.md esta declarado en SYNC_PAIRS."""
+    pairs = [(a, b) for a, b in SYNC_PAIRS]
+    assert any(
+        str(a) == str(FIXTURE_FILLER_ROOT) and str(b) == str(FIXTURE_FILLER_TEMPLATE)
+        for a, b in pairs
+    ), "el par fixtures/compaction-filler.md no esta en SYNC_PAIRS"
+
+
+def test_sync_detects_missing_fixture_checkpoint(tmp_path: Path) -> None:
+    """Si falta la copia raiz del checkpoint, verify_sync emite Issue."""
+    repo = _build_repo_with_fixtures(tmp_path, root_missing=True)
+    issues = verify_sync(repo)
+    expected = str(FIXTURE_CHECKPOINT_ROOT)
+    assert any(expected in i.message for i in issues), (
+        f"se esperaba Issue por falta de {expected} en raiz, issues: {issues}"
+    )
+
+
+def test_sync_detects_missing_fixture_filler(tmp_path: Path) -> None:
+    """Si falta la copia raiz del filler, verify_sync emite Issue."""
+    repo = _build_repo_with_fixtures(tmp_path, root_missing=True)
+    issues = verify_sync(repo)
+    expected = str(FIXTURE_FILLER_ROOT)
+    assert any(expected in i.message for i in issues), (
+        f"se esperaba Issue por falta de {expected} en raiz, issues: {issues}"
+    )
+
+
+def test_sync_detects_divergence_fixture_checkpoint(tmp_path: Path) -> None:
+    """Si la copia raiz del checkpoint difiere del template, verify_sync emite Issue."""
+    repo = _build_repo_with_fixtures(tmp_path, root_diverges=True)
+    issues = verify_sync(repo)
+    expected = str(FIXTURE_CHECKPOINT_ROOT)
+    assert any("difiere" in i.message and expected in i.message for i in issues), (
+        f"se esperaba Issue de divergencia en {expected}, issues: {issues}"
+    )
+
+
+def test_sync_detects_divergence_fixture_filler(tmp_path: Path) -> None:
+    """Si la copia raiz del filler difiere del template, verify_sync emite Issue."""
+    repo = _build_repo_with_fixtures(tmp_path, root_diverges=True)
+    issues = verify_sync(repo)
+    expected = str(FIXTURE_FILLER_ROOT)
+    assert any("difiere" in i.message and expected in i.message for i in issues), (
+        f"se esperaba Issue de divergencia en {expected}, issues: {issues}"
     )
 
 

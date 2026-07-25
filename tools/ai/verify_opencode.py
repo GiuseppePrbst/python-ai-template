@@ -192,6 +192,24 @@ SYNC_PAIRS: tuple[tuple[Path, Path], ...] = (
         / "plugins"
         / "structured-compaction.ts",
     ),
+    (
+        Path(".opencode") / "fixtures" / "compaction-checkpoint.md",
+        Path("src")
+        / "python_ai_template"
+        / "template"
+        / ".opencode"
+        / "fixtures"
+        / "compaction-checkpoint.md",
+    ),
+    (
+        Path(".opencode") / "fixtures" / "compaction-filler.md",
+        Path("src")
+        / "python_ai_template"
+        / "template"
+        / ".opencode"
+        / "fixtures"
+        / "compaction-filler.md",
+    ),
 )
 
 EXPECTED_HEADINGS: tuple[str, ...] = (

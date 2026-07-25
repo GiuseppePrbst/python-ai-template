@@ -54,6 +54,9 @@ REQUIRED_RESOURCES: tuple[str, ...] = (
     "python_ai_template/template/.opencode/commands/compact-test.md",
     "python_ai_template/template/.opencode/skills/context-handoff/SKILL.md",
     "python_ai_template/template/.opencode/plugins/structured-compaction.ts",
+    # Fixtures para /compact-test (v0.3.3)
+    "python_ai_template/template/.opencode/fixtures/compaction-checkpoint.md",
+    "python_ai_template/template/.opencode/fixtures/compaction-filler.md",
 )
 
 
