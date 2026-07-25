@@ -408,3 +408,14 @@ No se registran impresiones generales: solo experimentos comparables con una tar
 - **Escalado**: no.
 - **Correcciones**: La compactacion nativa no se confirmo; no hubo resumen post-compactacion y la retencion no pudo evaluarse.
 - **Notas**: Presupuesto de tres ciclos agotado. Plugin habilitado, pero su influencia causal no es observable. El arbol tenia cambios preexistentes y no aparecieron cambios adicionales atribuibles a la corrida.
+
+### 2026-07-24 — validación post-tag de python-ai-template v0.3.3
+
+- **Modelo**: n/a.
+- **Proveedor**: `local-and-github`.
+- **Agente**: `release`.
+- **Tarea**: validación post-tag de python-ai-template v0.3.3.
+- **Resultado**: `approved`.
+- **Escalado**: no.
+- **Correcciones**: ninguna
+- **Notas**: tag v0.3.3 publicado; apunta a 29ae680; instalación remota validada; versión 0.3.3; help validado; proyecto temporal generado; 9 artefactos OpenCode objetivo presentes; herramienta desinstalada; primera y segunda CI aprobadas.

@@ -76,9 +76,9 @@ revisa al inicio de cada sesion junto con `docs/current-state.md`.
   `/compact-test` y documentarlo en una nueva ADR sin reintroducir
   dependencias externas.
 
-## v0.3.3 — implementación y evidencia completas; revisión documental completa; ADR-014 aceptado; bump, build y primera CI completados; release pendiente
+## v0.3.3 — implementación, evidencia, revisión documental y validación remota completas; release cerrada
 
-Estado: **release pendiente**.
+Estado: **release cerrada**.
 
 - Fixtures distribuidos en `.opencode/fixtures/` y en el template:
   `compaction-checkpoint.md` (10 headings canónicos + 11 marcadores
@@ -119,18 +119,27 @@ Estado: **release pendiente**.
 - Build `0.3.3` completado con 14/14 recursos obligatorios.
 - Commit funcional `60697ce` ("feat: validate structured compaction
   workflow") completado.
+- Commit documental de release `29ae680` ("docs: record v0.3.3
+  release readiness") completado.
 - Push a `main` completado; `origin/main` actualizado.
 - Primera CI remota `30139073129` aprobada: jobs `quality` (Python
   3.12), `quality` (Python 3.14) y `package` en verde.
-- Documentación de release en curso en este mismo cambio
-  (`docs/todos.md` y `docs/current-state.md`).
-- Segunda CI pendiente tras el commit documental de release.
-- Tag `v0.3.3` pendiente.
-- Instalación desde tag pendiente.
-- Generación de proyecto con 9 artefactos OpenCode pendiente.
-- Documentación posterior al tag pendiente.
-- CI final pendiente.
-- Working tree limpio pendiente.
+- Segunda CI remota `30139219673` aprobada tras el commit documental.
+- Tag `v0.3.3` publicado y apuntando a `29ae680`.
+- Instalación desde tag remoto validada: `python-ai-template==0.3.3`.
+- `new-python-project --version` devolvió `0.3.3`.
+- `new-python-project --help` validado.
+- Proyecto temporal generado correctamente.
+- Los 9 artefactos OpenCode objetivo presentes en el proyecto
+  generado (`scout`, `review`, `handoff`, `verify`, `compact-test`,
+  `context-handoff`, `structured-compaction.ts`,
+  `fixtures/compaction-checkpoint.md`,
+  `fixtures/compaction-filler.md`).
+- Herramienta desinstalada correctamente; directorio temporal
+  eliminado.
+- Working tree antes del cambio documental actual: limpio.
+- Pendientes al cierre de este cambio: commit documental posterior al
+  tag, push, CI final, verificar working tree limpio.
 
 ## Backlog
 

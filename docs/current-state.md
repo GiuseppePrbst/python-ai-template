@@ -1,21 +1,29 @@
 # Estado actual
 
-Estado del repositorio durante el release de v0.3.3. Este archivo se reescribe con `/handoff` al final de cada bloque de trabajo siguiendo el formato canónico definido en la skill `context-handoff`. Permite retomar el trabajo sin la conversación previa.
+Estado del repositorio tras el cierre de v0.3.3. Este archivo se reescribe con `/handoff` al final de cada bloque de trabajo siguiendo el formato canónico definido en la skill `context-handoff`. Permite retomar el trabajo sin la conversación previa.
 
 ## Objetivo actual
 
-Cerrar la release de v0.3.3 — capa de compactación experimental con fixtures sintéticos distribuidos, validación estática ampliada y ADR-014 aceptado. Mantener el plugin `structured-compaction` en estado experimental y limitar el alcance del release: no introducir telemetría, persistencia, red, base de datos ni dependencias runtime; no promover el plugin a mecanismo validado por ausencia de evidencia empírica.
+v0.3.3 cerrada funcionalmente y validada desde el tag remoto. Mantener el plugin `structured-compaction` en estado experimental (ADR-014) y limitar el alcance del release: no introducir telemetría, persistencia, red, base de datos ni dependencias runtime; no promover el plugin a mecanismo validado por ausencia de evidencia empírica.
 
 ## Estado de la tarea
 
-- **v0.3.3**: implementación y evidencia completas; revisión documental completa; ADR-014 aceptado; bump, build y primera CI completados; release pendiente.
+- **v0.3.3**: release cerrada.
 - Versión vigente: `0.3.3` en las cuatro fuentes (`pyproject.toml`, `__init__.py`, nombre del wheel, METADATA).
 - Commit funcional: `60697ce` ("feat: validate structured compaction workflow").
-- Push: `main` actualizado en `origin/main`.
-- Primera CI remota: run `30139073129` — jobs `quality` (Python 3.12), `quality` (Python 3.14) y `package` aprobados.
-- Tag remoto: pendiente. No se afirma que el tag `v0.3.3` exista todavía.
-- Instalación desde tag: pendiente.
-- Working tree: cambios documentales en curso (`docs/todos.md`, `docs/current-state.md`) sin commitear. Branch: `main`, al día con `origin/main` antes del commit documental de release.
+- Commit documental de release: `29ae680` ("docs: record v0.3.3 release readiness").
+- Tag remoto: `v0.3.3` apunta a `29ae680`.
+- Instalación desde tag: validada. `python-ai-template==0.3.3` instalado desde el tag remoto.
+- `new-python-project --version`: `0.3.3`.
+- `new-python-project --help`: ayuda impresa sin errores.
+- Proyecto temporal: generado correctamente. Los 9 artefactos OpenCode objetivo presentes en el proyecto generado.
+- Herramienta: desinstalada correctamente. Directorio temporal eliminado.
+- Working tree antes del cambio documental actual: limpio. Branch: `main`, al día con `origin/main` antes del cambio documental actual.
+
+### CI remota aprobaba
+
+- Primera CI `30139073129`: jobs `quality` (Python 3.12), `quality` (Python 3.14) y `package` aprobados.
+- Segunda CI `30139219673`: jobs `quality` (Python 3.12), `quality` (Python 3.14) y `package` aprobados tras el commit documental de release.
 
 ### Pasos de release completados en v0.3.3
 
@@ -25,29 +33,52 @@ Cerrar la release de v0.3.3 — capa de compactación experimental con fixtures 
 - `rm -rf dist && uv build && uv run python tools/ai/verify_wheel.py`: wheel `python_ai_template-0.3.3-py3-none-any.whl` con 14/14 recursos obligatorios.
 - Commit funcional `60697ce` creado y pusheado a `main`.
 - Primera CI remota `30139073129` aprobada (3 jobs en verde).
+- Commit documental de release `29ae680` creado y pusheado a `main`.
+- Segunda CI remota `30139219673` aprobada (3 jobs en verde).
+- Tag `v0.3.3` publicado apuntando a `29ae680`.
+- Instalación desde tag remoto validada: `python-ai-template==0.3.3`.
+- `new-python-project --version` devolvió `0.3.3`.
+- `new-python-project --help` validado.
+- Proyecto temporal generado correctamente con los 9 artefactos OpenCode objetivo.
+- Herramienta desinstalada; directorio temporal eliminado.
 
-### Pasos de release pendientes en v0.3.3
+### Pendiente únicamente el cierre documental post-tag
 
-- Commit documental de release (este cambio) sobre `docs/todos.md` y `docs/current-state.md`.
-- Segunda CI tras el commit documental.
-- Tag `v0.3.3` apuntando al commit de release.
-- Instalación desde tag remoto validada.
-- Generación de proyecto temporal con 9 artefactos OpenCode (los 7 previos + los 2 fixtures).
-- Documentación posterior al tag (anotación del cierre y de la instalación validada).
+- Commit documental posterior al tag (`docs/todos.md`, `docs/current-state.md`, `docs/ai/evaluations.md`).
+- Push.
 - CI final con el árbol limpio.
-- Working tree limpio.
+- Verificar working tree limpio.
 
 ## Hechos verificados
 
-- `git status --short` antes del commit funcional mostraba los cambios de v0.3.3 sin commits pendientes en el cuerpo del release.
-- `uv run python tools/ai/verify.py` ejecutado localmente: 5 gates en verde, `pytest` 145 passed, `verify_opencode` 8/8.
-- `uv build && uv run python tools/ai/verify_wheel.py`: cuatro fuentes de versión coinciden en `0.3.3`; wheel `python_ai_template-0.3.3-py3-none-any.whl` con 14/14 recursos obligatorios.
-- Primera CI remota `30139073129`: jobs `quality` 3.12, `quality` 3.14 y `package` aprobados.
-- `git log` incluye el commit funcional `60697ce` con mensaje "feat: validate structured compaction workflow".
-- Branch `main` al día con `origin/main` tras el push del commit funcional.
+- `git status --short` antes del cambio documental actual: vacío.
+- `git log` incluye los commits `60697ce` (funcional) y `29ae680` (documental de release).
+- Tag `v0.3.3` existe en remoto y apunta a `29ae680`.
+- CI run `30139073129`: jobs `quality` 3.12, `quality` 3.14 y `package` aprobados.
+- CI run `30139219673`: jobs `quality` 3.12, `quality` 3.14 y `package` aprobados.
+- `uv tool install python-ai-template==0.3.3` desde el tag remoto: exitoso.
+- `new-python-project --version` → `0.3.3`.
+- `new-python-project --help` → ayuda impresa sin errores.
+- Proyecto temporal generado contenía los 9 artefactos OpenCode objetivo (los 7 previos + los 2 fixtures).
+- `uv tool uninstall python-ai-template`: exitoso.
+- Directorio temporal del proyecto generado: eliminado.
+- No existen secretos, claves, tokens, endpoints privados ni datos personales en ningún archivo de esta unidad.
 
-### Gaps de observación declarados
+### Artefactos OpenCode objetivo validados en el proyecto generado
 
+- `.opencode/agents/scout.md`.
+- `.opencode/commands/review.md`.
+- `.opencode/commands/handoff.md`.
+- `.opencode/commands/verify.md`.
+- `.opencode/commands/compact-test.md`.
+- `.opencode/skills/context-handoff/SKILL.md`.
+- `.opencode/plugins/structured-compaction.ts`.
+- `.opencode/fixtures/compaction-checkpoint.md`.
+- `.opencode/fixtures/compaction-filler.md`.
+
+### Gaps de observación declarados (evidencia histórica)
+
+- Las dos corridas controladas de `/compact-test` (MiniMax-M3/minimax-direct y gpt-5.6-sol/openai) fueron `inconclusive` por agotamiento de presupuesto sin compactación nativa confirmada.
 - No se ha confirmado compactación nativa en ninguna sesión.
 - No existe resumen post-compactación observado.
 - La retención de los 11 marcadores, los 10 headings canónicos y `NEXT-01` no es evaluable sin resumen.
@@ -73,18 +104,34 @@ Cerrar la release de v0.3.3 — capa de compactación experimental con fixtures 
 - `tests/test_verify_wheel.py`: 5 tests nuevos sobre `REQUIRED_RESOURCES` actualizado.
 - `.opencode/fixtures/compaction-checkpoint.md` y `.opencode/fixtures/compaction-filler.md` y copias en `src/python_ai_template/template/.opencode/fixtures/`: fixtures sintéticos nuevos.
 - `docs/architecture.md`: nota sobre fixtures y `/compact-test`.
-- `docs/todos.md` y `docs/current-state.md`: documentación de release en este commit (cambio actual).
-- `docs/ai/compaction-evaluation.md`, `docs/ai/evaluations.md`, `docs/decisions.md`: informe comparativo, entradas de evaluación y ADR-014.
+- `docs/ai/compaction-evaluation.md`: informe comparativo con tabla de MiniMax/Codex y conclusión final.
+- `docs/ai/evaluations.md`: dos entradas nuevas (corridas `inconclusive` MiniMax y Codex).
+- `docs/decisions.md`: ADR-014 anexada al registro único.
 - `pyproject.toml` y `src/python_ai_template/__init__.py`: bump `0.3.2` → `0.3.3`.
 - `uv.lock`: regenerado por `uv lock`.
 
-### Cambios pendientes sin commitear
+### Cambios de v0.3.3 commiteados en `29ae680` (documental de release)
 
-- `docs/todos.md` y `docs/current-state.md`: actualización de release post-CI (este cambio).
+- `docs/todos.md`: bloque v0.3.3 actualizado con bump, gates, build, primera CI y siguientes pasos pendientes.
+- `docs/current-state.md`: estado operativo v0.3.3 con primera CI aprobada.
+
+### Cambios pendientes sin commitear (este cambio)
+
+- `docs/todos.md`: marcar v0.3.3 como release cerrada y reducir pendientes al cierre documental post-tag.
+- `docs/current-state.md`: reflejar cierre funcional y validación desde el tag remoto.
+- `docs/ai/evaluations.md`: entrada única de validación post-tag de v0.3.3.
 
 ## Validaciones ejecutadas
 
-### CI remota (run `30139073129`)
+### CI remota `30139073129` (primera)
+
+| Job | Estado |
+|-----|--------|
+| `quality` (Python 3.12) | aprobado |
+| `quality` (Python 3.14) | aprobado |
+| `package` | aprobado |
+
+### CI remota `30139219673` (segunda)
 
 | Job | Estado |
 |-----|--------|
@@ -103,36 +150,25 @@ Cerrar la release de v0.3.3 — capa de compactación experimental con fixtures 
 | `verify_opencode` | OK: invariantes verificados (8/8) |
 | `uv build && verify_wheel.py` | OK: 0.3.3, 14/14 recursos |
 
-### Validación local desde el wheel `0.3.3`
+### Validación desde el tag remoto `v0.3.3`
 
-| Recurso | Presente |
-|---------|----------|
-| `python_ai_template/template/.gitignore` | sí |
-| `python_ai_template/template/.opencode/.gitignore` | sí |
-| `python_ai_template/template/pyproject.toml.tmpl` | sí |
-| `python_ai_template/template/src/__package_name__/__init__.py.tmpl` | sí |
-| `python_ai_template/template/tests/test_smoke.py.tmpl` | sí |
-| `python_ai_template/template/.opencode/agents/scout.md` | sí |
-| `python_ai_template/template/.opencode/commands/review.md` | sí |
-| `python_ai_template/template/.opencode/commands/handoff.md` | sí |
-| `python_ai_template/template/.opencode/commands/verify.md` | sí |
-| `python_ai_template/template/.opencode/commands/compact-test.md` | sí |
-| `python_ai_template/template/.opencode/skills/context-handoff/SKILL.md` | sí |
-| `python_ai_template/template/.opencode/plugins/structured-compaction.ts` | sí |
-| `python_ai_template/template/.opencode/fixtures/compaction-checkpoint.md` | sí |
-| `python_ai_template/template/.opencode/fixtures/compaction-filler.md` | sí |
+| Comando | Resultado |
+|---------|-----------|
+| Tag remoto `v0.3.3` apuntando a `29ae680` | publicado |
+| `uv tool install python-ai-template==0.3.3` desde tag | exitoso |
+| `new-python-project --version` | `0.3.3` |
+| `new-python-project --help` | ayuda impresa |
+| Proyecto generado: 9 artefactos OpenCode | presentes |
+| `uv tool uninstall python-ai-template` | exitoso |
+| Directorio temporal del proyecto | eliminado |
 
-### Pendientes en este release
+### Pendiente al cierre del release
 
-- Segunda CI tras el commit documental.
-- Tag `v0.3.3` y validación de instalación desde tag.
-- Generación de proyecto temporal con 9 artefactos OpenCode.
-- Documentación posterior al tag.
-- CI final con árbol limpio.
+- CI final con el árbol limpio tras este cambio documental.
 
 ## Errores pendientes
 
-- **Ninguno bloqueante.** v0.3.3 sigue sin regresiones.
+- **Ninguno bloqueante.** v0.3.3 cerrada sin regresiones.
 - **Carácter experimental del hook** `experimental.session.compacting`: riesgo conocido desde ADR-012, reafirmado por ADR-014. El plugin puede dejar de registrar el callback si OpenCode renombra o elimina el hook experimental.
 - **Compactación real por umbral**: no se ha disparado ni verificado empíricamente en ninguna sesión. Las dos corridas controladas de `/compact-test` (MiniMax y Codex) fueron `inconclusive` por agotamiento de presupuesto sin compactación confirmada. Sigue siendo el riesgo abierto principal del plugin.
 - **Causalidad del plugin no observable**: sin logs ni telemetría, no es posible atribuir causalidad al plugin. ADR-014 mantiene el plugin en estado experimental por este motivo.
@@ -147,9 +183,9 @@ Cerrar la release de v0.3.3 — capa de compactación experimental con fixtures 
 
 ## Divergencias detectadas
 
-- **Ninguna.** El código commiteado, el push, la primera CI remota y la documentación están alineados en `0.3.3`. El tag remoto no existe todavía; eso es esperado en este punto del release.
-- La única divergencia operativa es que `docs/todos.md` y `docs/current-state.md` aún no están commiteados tras la primera CI; ese commit forma parte del flujo de release pendiente y se describe en el bloque "Pasos de release pendientes".
+- **Ninguna en el release cerrado.** El código commiteado, el push, ambas CI remotas, el tag remoto, la instalación validada, el proyecto generado con 9 artefactos y la documentación están alineados en `v0.3.3`.
+- La única divergencia operativa es que el cambio documental actual (`docs/todos.md`, `docs/current-state.md`, `docs/ai/evaluations.md`) aún no se ha commiteado tras la validación desde el tag remoto; ese commit forma parte del flujo de release pendiente y se describe en el bloque "Pendiente únicamente el cierre documental post-tag".
 
 ## Siguiente acción concreta
 
-Continuar el release de v0.3.3 con el commit documental sobre `docs/todos.md` y `docs/current-state.md`, esperar la segunda CI, crear el tag `v0.3.3`, validar la instalación desde el tag remoto y generar un proyecto temporal con 9 artefactos OpenCode (los 7 previos + los 2 fixtures). Tras la instalación validada y la documentación posterior al tag, correr la CI final y dejar el working tree limpio. No introducir Cavemem, OpenRouter, routing adaptativo ni telemetría externa sin una ADR propia.
+Realizar el commit documental posterior al tag con `docs/todos.md`, `docs/current-state.md` y `docs/ai/evaluations.md`, hacer push, correr la CI final y verificar el working tree limpio. No introducir Cavemem, OpenRouter, routing adaptativo ni telemetría externa sin una ADR propia.
