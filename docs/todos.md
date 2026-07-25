@@ -76,7 +76,7 @@ revisa al inicio de cada sesion junto con `docs/current-state.md`.
   `/compact-test` y documentarlo en una nueva ADR sin reintroducir
   dependencias externas.
 
-## v0.3.3 — implementación y evidencia completas; revisión documental completa; ADR-014 aceptado; release pendiente
+## v0.3.3 — implementación y evidencia completas; revisión documental completa; ADR-014 aceptado; bump, build y primera CI completados; release pendiente
 
 Estado: **release pendiente**.
 
@@ -113,12 +113,24 @@ Estado: **release pendiente**.
   No se promueve el plugin a mecanismo validado, no se elimina por
   ausencia de evidencia de fallo, no se amplía su funcionalidad, y no
   se añade telemetría, persistencia, red ni dependencias runtime.
-- Release pendiente al cierre: bump `0.3.2` → `0.3.3`,
-  gates finales, build con 14/14 recursos, commit funcional, push,
-  CI remota, documentación de release, segunda CI, tag
-  `v0.3.3`, instalación desde el tag remoto, generación de proyecto
-  con 9 artefactos OpenCode, documentación posterior al tag, CI
-  final, working tree limpio.
+- Bump `0.3.2` → `0.3.3` completado.
+- Gates finales completados: `ruff check`, `ruff format --check`,
+  `pyright`, `pytest` (145 passed), `verify_opencode` (8/8).
+- Build `0.3.3` completado con 14/14 recursos obligatorios.
+- Commit funcional `60697ce` ("feat: validate structured compaction
+  workflow") completado.
+- Push a `main` completado; `origin/main` actualizado.
+- Primera CI remota `30139073129` aprobada: jobs `quality` (Python
+  3.12), `quality` (Python 3.14) y `package` en verde.
+- Documentación de release en curso en este mismo cambio
+  (`docs/todos.md` y `docs/current-state.md`).
+- Segunda CI pendiente tras el commit documental de release.
+- Tag `v0.3.3` pendiente.
+- Instalación desde tag pendiente.
+- Generación de proyecto con 9 artefactos OpenCode pendiente.
+- Documentación posterior al tag pendiente.
+- CI final pendiente.
+- Working tree limpio pendiente.
 
 ## Backlog
 
