@@ -354,3 +354,68 @@ Las decisiones no se modifican silenciosamente. Una corrección se hace añadien
   - La unidad v0.3.3 actualiza `docs/ai/compaction-evaluation.md` (informe comparativo MiniMax/Codex con clasificación `inconclusive` para ambas corridas), `docs/architecture.md` (sección sobre fixtures y `/compact-test`), `docs/todos.md` (registro de la unidad con `release pendiente`), `docs/ai/evaluations.md` (entradas de evaluación de ambas corridas) y `docs/decisions.md` (esta ADR).
   - No se añaden dependencias de runtime al paquete Python. No se introduce `pre-commit`. No se publica a PyPI ni se crean GitHub Releases.
 - **Reversibilidad**: fácil. Revertir requiere eliminar `docs/ai/compaction-evaluation.md`, los dos pares añadidos a `SYNC_PAIRS` (`fixtures/compaction-checkpoint.md` y `fixtures/compaction-filler.md`) y los dos recursos añadidos a `REQUIRED_RESOURCES`; restaurar el comando `/compact-test` (raíz y template) a su forma previa a v0.3.3; eliminar el archivo independiente de pruebas `tests/test_compaction_fixture.py` y los seis tests de sync de fixtures en `tests/test_verify_opencode.py`. ADR-012, ADR-013 y esta ADR-014 mantendrían su vigencia como registro histórico, y una ADR posterior debería marcar ADR-014 como "Reemplazada por ADR-NNN" o "Revertida por ADR-NNN". El bump de versión se revierte trivialmente con `git revert`; el paquete no tiene cambios funcionales.
+
+## ADR-015: contrato bounded execution loop anti-runaway con resource_limit
+
+- **Fecha**: 2026-07-30
+- **Estado**: aceptada (revisada 2026-07-30: extraída especificación ejecutable,
+  aclarada frontera con watchdog runtime).
+- **Contexto**: los agentes autónomos del repositorio (implementer, debugger)
+  pueden producir runaway loops / no-progress loops al repetir el mismo
+  comando o diagnóstico sin avance verificable. Además, la interrupción por
+  límite de cuota del proveedor (token plan exhausted) no tenía manejo
+  explícito en el contrato, imposibilitando la recuperación ordenada con otro
+  modelo.
+- **Decisión**:
+  1. El contrato `bounded execution loop` se formaliza en
+     `docs/bounded-loop.md` como fuente de verdad operativa anti-loop.
+  2. La especificación ejecutable se extrae a
+     `tools/ai/bounded_loop_contract.py`, un simulador de contrato que NO
+     implementa watchdog runtime, contador real de tool calls, cancelación
+     del modelo ni enforcement externo del presupuesto.
+  3. `tests/test_bounded_loop.py` importa desde la especificación ejecutable
+     y verifica los 22 escenarios (10 operativos, 7 invariantes, 5
+     resource_limit).
+  4. `StepOutcome.completes_phase: bool` (default `False`) distingue avance
+     intra-fase de finalización de fase.
+  5. `COMPLETED` requiere `success and progress and completes_phase`.
+  6. El reinicio de una fase completada produce `BLOCKED_LOOP` antes que
+     idempotencia.
+  7. `ResourceLimit` es un evento genérico independiente de proveedor que
+     produce `ESCALATED`.
+  8. El mensaje del proveedor se sanitiza (no expone credenciales).
+  9. Una tarea puede reanudarse con otro modelo si existe checkpoint, se
+     conserva el working tree y se conocen los comandos ya ejecutados sin
+     repetir pasos exitosos.
+  10. La verificación estática (`tools/ai/verify_opencode.py`) comprueba
+      existencia del documento, marcadores obligatorios, referencia desde
+      agentes autónomos y desde el comando `/handoff`, y sincronización
+      root ↔ template.
+  11. Queda explícitamente documentado que el enforcement runtime (watchdog,
+      cancelación de tool calls, contador real, persistencia operacional)
+      no está implementado en esta unidad y se pospone a una unidad posterior.
+- **Alternativas consideradas**:
+  - **No modelar resource_limit**: descartado porque la interrupción real
+    ocurrió y debe poder manejarse.
+  - **Modelar resource_limit como step outcome**: descartado porque es un
+    evento externo, no un resultado de acción.
+  - **Crear terminal status nuevo (RESOURCE_EXHAUSTED)**: descartado por
+    principio de cambio mínimo; `ESCALATED` cubre el caso con
+    `escalation_reason`.
+  - **Integración específica por proveedor**: descartado; `ResourceLimit` es
+    genérico.
+- **Consecuencias**:
+  - El simulador bounded-loop pasa a ser validación contractual obligatoria.
+  - Cualquier cambio en las reglas anti-loop debe mantener los 22 tests.
+  - Los agentes autónomos referencian `docs/bounded-loop.md` y deben
+    respetar las reglas en su ejecución.
+  - `ResourceLimit` permite que el orquestador decida reanudación sin
+    acoplarse a un proveedor específico.
+  - La sanitización de mensajes evita fugas de credenciales en logs y
+    handoffs.
+  - La frontera con el watchdog runtime queda documentada para evitar
+    afirmaciones incorrectas sobre capacidades no implementadas.
+- **Reversibilidad**: alta. El contrato y el simulador viven en archivos
+  independientes (`docs/bounded-loop.md`, `tools/ai/bounded_loop_contract.py`,
+  `tests/test_bounded_loop.py`). Revertir requiere eliminar esos archivos y
+  las referencias en los agentes.

@@ -24,12 +24,39 @@ Reproduce, diagnostica y corrige problemas de comportamiento, fallos de tests, r
 - **No hace commits.**
 - **No realiza cambios arquitectónicos amplios** como parte de un fix; si el fix lo requiere, se detiene y propone un plan.
 
+## Contrato de ejecución
+
+Este agente opera bajo el **contrato bounded execution loop** definido en
+`docs/bounded-loop.md`. En concreto declara y respeta:
+
+- **Presupuesto de pasos** explícito por fase, agotado el cual termina.
+- **Máximo un retry** del mismo `action_fingerprint`.
+- **Prohibición de repetir comandos exitosos** en la misma fase.
+- **Parada tras dos iteraciones consecutivas sin progreso**
+  (`no_progress_count <= 2`) con estado terminal `BLOCKED_LOOP`.
+- **Estado `BLOCKED_LOOP`** cuando se cumple cualquiera de las reglas
+  descritas en `docs/bounded-loop.md`.
+- **Handoff estructurado al detenerse**: invoca `/handoff` con
+  `terminal_status` y `escalation_reason` cuando el estado terminal
+  es distinto de `COMPLETED`.
+- **Salida visible sin bloques `<think>` ni deliberación privada**:
+  el razonamiento se declara en `state_before`,
+  `expected_state_change` y `state_after`; el resto es ejecución
+  observable.
+
+La política detallada (fingerprint, schema de checkpoint, frontera
+con el runtime) vive en `docs/bounded-loop.md` y no se duplica aquí.
+Su presencia en el agente y en el verificador estático
+(`tools/ai/verify_opencode.py`) garantiza que no se omite por
+regresión.
+
 ## Documentos a consultar
 
 - `AGENTS.md`: reglas obligatorias y quality gates.
 - `docs/architecture.md`: para entender el comportamiento esperado.
 - `docs/mistakes.md`: para verificar si el error ya fue registrado y aprender de la causa raíz anterior.
 - `docs/decisions.md`: para no contradecir decisiones vigentes.
+- `docs/bounded-loop.md`: contrato bounded execution loop (este agente lo aplica).
 - Skill `python-quality` cuando el problema está en código Python.
 
 ## Salida esperada

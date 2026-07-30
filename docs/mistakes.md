@@ -80,3 +80,57 @@ No se registran errores triviales: ni typos de una vez, ni descuidos puntuales s
   Los tests unitarios del generador son necesarios pero **no sustituyen** el
   E2E semántico. La regla queda incorporada a la definición de terminado de
   esta plantilla.
+
+---
+
+### 2026-07-30 — Runaway loop por detección tardía de no-progress / mismo fingerprint
+
+- **Síntoma**: el simulador de bounded execution loop no detectaba a tiempo que
+  una misma acción se repetía sin progreso, permitiendo iteraciones fantasma
+  que consumían presupuesto sin avanzar. En concreto: la regla de finalización
+  comparaba `expected_state_change` con `state_after` y declaraba la fase
+  completada sin señal explícita (`completes_phase`), y el límite de
+  no-progress usaba `>` en vez de `>=`.
+- **Causa raíz**: el contrato original carecía de un flag explícito
+  (`completes_phase`) para distinguir "avance dentro de la fase" de "fase
+  completada". Además, el orden de evaluación en `run_step` priorizaba la
+  idempotencia del estado terminal sobre la detección de reinicio de fase
+  completada, dando lugar a que un `COMPLETED` fuese idempotente en vez de
+  producir `BLOCKED_LOOP`.
+- **Corrección**:
+  - Se introdujo `StepOutcome.completes_phase: bool` (default `False`).
+  - Se cambió el orden de reglas: reinicio de fase completada se evalúa
+    antes que idempotencia.
+  - `COMPLETED` requiere `outcome.success and progress and outcome.completes_phase`.
+  - `no_progress_count >= DEFAULT_MAX_NO_PROGRESS` usa `>=` en vez de `>`.
+  - Se añadieron tests 9 y 10 para verificar casos límite de `completes_phase`.
+- **Prevención**: el simulador en `tests/test_bounded_loop.py` es la
+  validación contractual. Cualquier cambio en las reglas del loop debe
+  mantener los 22 tests actuales (10 escenarios + 7 invariantes + 5
+  resource_limit).
+
+### 2026-07-30 — Provider resource exhaustion sin manejo explícito en el contrato
+
+- **Síntoma**: la interrupción por límite de cuota del proveedor (token plan
+  exhausted) no tenía representación en el contrato bounded-loop. Al ocurrir,
+  el worker no podía distinguir entre un fallo normal y un agotamiento de
+  recurso externo reanudable.
+- **Causa raíz**: el contrato original modelaba `ESCALATED` como "el worker
+  juzgó que requiere un humano", pero no cubría el caso específico de límite
+  de recurso del proveedor, que es reanudable con distinto modelo y requiere
+  sanitización del mensaje.
+- **Corrección**: se modeló `ResourceLimit` como evento genérico (independiente
+  de proveedor: DeepSeek, MiniMax, OpenAI, etc.) con campos `provider`,
+  `model`, `limit_kind`, `raw_message` (sanitizado), `tool_calls_used`,
+  `step_number`, `checkpoint_available` y `resumable`. La función
+  `handle_resource_limit` produce `ESCALATED` con razón documentada y mensaje
+  sanitizado.
+- **Prevención**:
+  - `resource_limit → ESCALATED` (agotamiento de plan/cuota externo), no
+    confundir con `runaway_loop → BLOCKED_LOOP` (misma acción repetida
+    sin progreso).
+  - No atribuir causalidad al proveedor sin evidencia: `ResourceLimit` es
+    genérico y no presume qué proveedor lo causó.
+  - Los 5 tests de `ResourceLimit` en `tests/test_bounded_loop.py` verifican:
+    token exhausto → ESCALATED, checkpoint disponible, no acciones posteriores,
+    reanudabilidad, y sanitización de credenciales.

@@ -10,6 +10,25 @@ persona o por otro agente sin la conversación previa.
 Invocar al cerrar una sesión de trabajo o cuando se quiera pasar el
 relevo a otra persona o a otro agente.
 
+### Invocación obligatoria por bounded execution loop
+
+Todo agente que opere bajo el contrato `docs/bounded-loop.md` debe
+invocar `/handoff` cuando su `terminal_status` sea **distinto de
+`COMPLETED`** (`FAILED`, `BLOCKED`, `BLOCKED_LOOP`, `ESCALATED`,
+`CANCELLED`). En particular, cuando el estado terminal es
+`BLOCKED_LOOP` o `ESCALATED`, el handoff **debe** registrar en la
+sección `Estado de la tarea` y en `Errores pendientes`:
+
+- `terminal_status` efectivo;
+- `escalation_reason` (qué límite se activó o por qué se escaló);
+- los últimos `action_fingerprint` ejecutados y sus `state_after`;
+- el valor final de `step_number`, `step_budget`, `retry_count` y
+  `no_progress_count`.
+
+Esta invocación es contractual: el verificador estático exige que el
+contrato esté referenciado desde los agentes autónomos y que el
+comando `/handoff` lo reconozca como salida estructurada.
+
 ## Contrato
 
 - **Actualizar `docs/current-state.md`** con las diez secciones
