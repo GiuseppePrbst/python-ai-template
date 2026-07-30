@@ -11,6 +11,7 @@ requires-python = ">=3.12"
 
 [project.scripts]
 new-python-project = "python_ai_template.cli:main"
+python-ai-template = "python_ai_template.main:main"
 
 [dependency-groups]
 dev = [
