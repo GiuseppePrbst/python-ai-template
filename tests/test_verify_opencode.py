@@ -17,6 +17,10 @@ sys.path.insert(
 )
 
 from verify_opencode import (  # noqa: E402
+    BOUNDED_LOOP_AGENT_PATHS,
+    BOUNDED_LOOP_AGENT_REFERENCE,
+    BOUNDED_LOOP_DOC_MARKERS,
+    BOUNDED_LOOP_DOC_PATH,
     CONTEXT_HANDOFF_SKILL_PATH,
     CURRENT_STATE_PATH,
     EXPECTED_HEADINGS,
@@ -33,6 +37,7 @@ from verify_opencode import (  # noqa: E402
     strip_comments_only,
     verify_agent_files,
     verify_all,
+    verify_bounded_loop_contract,
     verify_current_state,
     verify_plugin,
     verify_sync,
@@ -89,12 +94,19 @@ def _build_repo(
     plugin_text = plugin_source if plugin_source is not None else _valid_plugin_source()
     scout_text = "# scout\n"
     review_text = "# /review\n"
-    handoff_text = "# /handoff\n"
+    handoff_text = (
+        "# /handoff\n"
+        "\n"
+        "Bounded execution loop: ver `docs/bounded-loop.md` para el contrato.\n"
+    )
     verify_text = "# /verify\n"
     skill_text = "# context-handoff\n"
     compact_text = "# /compact-test\n"
     fixture_checkpoint_text = "# checkpoint sintetico\n"
     fixture_filler_text = "# filler sintetico\n"
+    bounded_loop_text = _bounded_loop_doc_text()
+    implementer_text = _agent_with_bounded_loop_reference("implementer")
+    debugger_text = _agent_with_bounded_loop_reference("debugger")
 
     # Escribir en el template (fuente canonica)
     plugin_path = tmp_path / PLUGIN_REPO_PATH
@@ -122,6 +134,14 @@ def _build_repo(
     )
     (tmp_path / CONTEXT_HANDOFF_SKILL_PATH).parent.mkdir(parents=True, exist_ok=True)
     (tmp_path / CONTEXT_HANDOFF_SKILL_PATH).write_text(skill_text, encoding="utf-8")
+    # Agentes autonomos referenciando el contrato bounded execution loop.
+    template_agents = tmp_path / TEMPLATE_OPENCODE_ROOT / "agents"
+    (template_agents / "implementer.md").parent.mkdir(parents=True, exist_ok=True)
+    (template_agents / "implementer.md").write_text(implementer_text, encoding="utf-8")
+    (template_agents / "debugger.md").write_text(debugger_text, encoding="utf-8")
+    # Contrato bounded execution loop en el template.
+    (tmp_path / BOUNDED_LOOP_DOC_PATH).parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / BOUNDED_LOOP_DOC_PATH).write_text(bounded_loop_text, encoding="utf-8")
     # Fixtures de compactacion (v0.3.3): viven en el template y se sincronizan
     (tmp_path / FIXTURE_CHECKPOINT_TEMPLATE).parent.mkdir(parents=True, exist_ok=True)
     (tmp_path / FIXTURE_CHECKPOINT_TEMPLATE).write_text(
@@ -141,6 +161,24 @@ def _build_repo(
             root_full.write_bytes(tpl_full.read_bytes())
 
     return tmp_path
+
+
+def _bounded_loop_doc_text() -> str:
+    """Devuelve un cuerpo sintetico que satisface todos los marcadores."""
+    parts = ["# Contrato bounded execution loop\n\n"]
+    for marker in BOUNDED_LOOP_DOC_MARKERS:
+        parts.append(f"Token obligatorio presente: {marker}\n\n")
+    parts.append("Handoff al detenerse via `/handoff`.\n")
+    return "".join(parts)
+
+
+def _agent_with_bounded_loop_reference(name: str) -> str:
+    """Devuelve un agente sintetico que referencia el contrato bounded-loop."""
+    return (
+        f"# {name}\n\n"
+        "Contrato: ver `docs/bounded-loop.md` para el protocolo bounded "
+        "execution loop.\n"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -817,6 +855,103 @@ def test_sync_detects_divergence_fixture_filler(tmp_path: Path) -> None:
     assert any("difiere" in i.message and expected in i.message for i in issues), (
         f"se esperaba Issue de divergencia en {expected}, issues: {issues}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Contrato bounded execution loop (invariante 9)
+# ---------------------------------------------------------------------------
+
+
+def test_bounded_loop_contract_ok(tmp_path: Path) -> None:
+    """El repo sintetico completo satisface el invariante 9."""
+    repo = _build_repo(tmp_path)
+    assert verify_bounded_loop_contract(repo) == []
+
+
+def test_bounded_loop_contract_doc_missing(tmp_path: Path) -> None:
+    """Si el doc no existe, verify_bounded_loop_contract emite Issue."""
+    repo = _build_repo(tmp_path)
+    (repo / BOUNDED_LOOP_DOC_PATH).unlink()
+    issues = verify_bounded_loop_contract(repo)
+    assert any("no existe" in i.message for i in issues)
+
+
+def test_bounded_loop_contract_doc_empty(tmp_path: Path) -> None:
+    """Si el doc esta vacio, el verificador emite Issue."""
+    repo = _build_repo(tmp_path)
+    (repo / BOUNDED_LOOP_DOC_PATH).write_text("", encoding="utf-8")
+    issues = verify_bounded_loop_contract(repo)
+    assert any("vacio" in i.message for i in issues)
+
+
+def test_bounded_loop_contract_marker_missing(tmp_path: Path) -> None:
+    """Si falta un marcador obligatorio, el verificador lo nombra."""
+    repo = _build_repo(tmp_path)
+    doc = repo / BOUNDED_LOOP_DOC_PATH
+    text = doc.read_text(encoding="utf-8")
+    # Elimina uno de los marcadores exigidos.
+    text = text.replace("BLOCKED_LOOP", "BLOKED_LOOP", 1)
+    doc.write_text(text, encoding="utf-8")
+    issues = verify_bounded_loop_contract(repo)
+    assert any("BLOCKED_LOOP" in i.message for i in issues)
+
+
+def test_bounded_loop_contract_agent_reference_missing(tmp_path: Path) -> None:
+    """Si un agente autonomo no referencia el contrato, el verificador emite Issue."""
+    repo = _build_repo(tmp_path)
+    implementer = repo / BOUNDED_LOOP_AGENT_PATHS[0]
+    implementer.write_text(
+        "# implementer\n\nSin referencia al contrato.\n",
+        encoding="utf-8",
+    )
+    issues = verify_bounded_loop_contract(repo)
+    assert any(BOUNDED_LOOP_AGENT_REFERENCE in i.message for i in issues)
+
+
+def test_bounded_loop_contract_agent_missing(tmp_path: Path) -> None:
+    """Si el archivo de un agente autonomo no existe, el verificador emite Issue."""
+    repo = _build_repo(tmp_path)
+    (repo / BOUNDED_LOOP_AGENT_PATHS[0]).unlink()
+    issues = verify_bounded_loop_contract(repo)
+    assert any("no existe" in i.message for i in issues)
+
+
+def test_bounded_loop_contract_integrated_in_verify_all(tmp_path: Path) -> None:
+    """verify_all agrega los issues del contrato bounded execution loop."""
+    repo = _build_repo(tmp_path)
+    (repo / BOUNDED_LOOP_DOC_PATH).unlink()
+    issues = verify_all(repo)
+    assert any(i.area == "bounded-loop" and "no existe" in i.message for i in issues)
+
+
+def test_bounded_loop_contract_paths_declared() -> None:
+    """Las rutas y marcadores exportados siguen siendo los declarados."""
+    assert (
+        str(BOUNDED_LOOP_DOC_PATH)
+        == "src/python_ai_template/template/docs/bounded-loop.md"
+    )
+    assert len(BOUNDED_LOOP_AGENT_PATHS) == 3
+    assert all(
+        p.name in {"implementer.md", "debugger.md", "handoff.md"}
+        for p in BOUNDED_LOOP_AGENT_PATHS
+    )
+    assert "docs/bounded-loop.md" == BOUNDED_LOOP_AGENT_REFERENCE
+    # Cada marcador exigido debe aparecer en el set minimo del contrato.
+    for required in (
+        "bounded execution loop",
+        "action_fingerprint",
+        "step_budget",
+        "retry_count",
+        "no_progress_count",
+        "terminal_status",
+        "BLOCKED_LOOP",
+        "COMPLETED",
+        "/handoff",
+        "resource_limit",
+        "checkpoint",
+        "watchdog externo",
+    ):
+        assert required in BOUNDED_LOOP_DOC_MARKERS
 
 
 if __name__ == "__main__":

@@ -22,6 +22,10 @@ Invariantes verificados:
    ``.opencode/commands/handoff.md`` y ``.opencode/skills/context-handoff/SKILL.md``.
 8. ``docs/current-state.md`` contiene exactamente los 10 encabezados
    canonicos, una vez cada uno, en orden estricto.
+9. El **contrato bounded execution loop** vive en
+   ``src/python_ai_template/template/docs/bounded-loop.md`` con los
+   marcadores obligatorios del protocolo, y los agentes autonomos
+   (``implementer.md`` y ``debugger.md``) lo referencian.
 
 Inspeccion textual deliberadamente estrecha
 ------------------------------------------
@@ -121,6 +125,50 @@ CONTEXT_HANDOFF_SKILL_PATH = (
     / "SKILL.md"
 )
 CURRENT_STATE_PATH = Path("docs") / "current-state.md"
+
+# Contrato bounded execution loop (anti runaway-loop). El documento vive
+# dentro del template canonico y se distribuye con el wheel. Los agentes
+# autonomos (implementer, debugger) deben declararlo por referencia.
+BOUNDED_LOOP_DOC_PATH = (
+    Path("src") / "python_ai_template" / "template" / "docs" / "bounded-loop.md"
+)
+BOUNDED_LOOP_AGENT_PATHS: tuple[Path, ...] = (
+    (
+        Path("src")
+        / "python_ai_template"
+        / "template"
+        / ".opencode"
+        / "agents"
+        / "implementer.md"
+    ),
+    (
+        Path("src")
+        / "python_ai_template"
+        / "template"
+        / ".opencode"
+        / "agents"
+        / "debugger.md"
+    ),
+    HANDOFF_COMMAND_PATH,
+)
+# Marcadores que el documento bounded-loop.md debe contener. El verificador
+# exige que cada marcador aparezca literal en el documento. La referencia
+# canonica en los agentes se busca por la frase "docs/bounded-loop.md".
+BOUNDED_LOOP_DOC_MARKERS: tuple[str, ...] = (
+    "bounded execution loop",
+    "action_fingerprint",
+    "step_budget",
+    "retry_count",
+    "no_progress_count",
+    "terminal_status",
+    "BLOCKED_LOOP",
+    "COMPLETED",
+    "/handoff",
+    "resource_limit",
+    "checkpoint",
+    "watchdog externo",
+)
+BOUNDED_LOOP_AGENT_REFERENCE = "docs/bounded-loop.md"
 
 # Pares root <-> template que deben ser byte a byte identicos.
 # Politica canonica (ADR-013):
@@ -260,7 +308,7 @@ FORBIDDEN_EXEC_TOKENS: tuple[str, ...] = (
 
 # Numero exacto de comprobaciones que se imprimen en el resumen OK.
 # Debe coincidir con las lineas [ok] en _report().
-TOTAL_OK_CHECKS = 8
+TOTAL_OK_CHECKS = 9
 
 # Imports prohibidos (sobre texto crudo). Se valida el modulo origen.
 FORBIDDEN_IMPORT_MODULES: tuple[str, ...] = (
@@ -815,6 +863,99 @@ def verify_sync(repo_root: Path) -> list[Issue]:
     return issues
 
 
+def verify_bounded_loop_contract(repo_root: Path) -> list[Issue]:
+    """Verifica que el contrato bounded execution loop este vigente.
+
+    Invariante 9 del gate: el contrato vive en
+    ``src/python_ai_template/template/docs/bounded-loop.md`` y los
+    agentes autonomos (``implementer.md`` y ``debugger.md``) lo
+    referencian por la frase canonica ``docs/bounded-loop.md``.
+
+    El documento debe contener los marcadores obligatorios declarados
+    en ``BOUNDED_LOOP_DOC_MARKERS``. Los agentes deben contener la
+    frase canonica ``BOUNDED_LOOP_AGENT_REFERENCE``. La inspeccion es
+    textual y deliberadamente estrecha: si el contrato crece, el set
+    de marcadores se actualiza aqui.
+    """
+    issues: list[Issue] = []
+
+    doc_full = repo_root / BOUNDED_LOOP_DOC_PATH
+    if not doc_full.is_file():
+        issues.append(
+            Issue(
+                area="bounded-loop",
+                message=(
+                    "el contrato bounded execution loop no existe en "
+                    f"{BOUNDED_LOOP_DOC_PATH}"
+                ),
+            )
+        )
+        return issues
+
+    try:
+        doc_text = doc_full.read_text(encoding="utf-8")
+    except OSError as exc:
+        issues.append(
+            Issue(
+                area="bounded-loop",
+                message=f"no se pudo leer {BOUNDED_LOOP_DOC_PATH}: {exc}",
+            )
+        )
+        return issues
+
+    if not doc_text.strip():
+        issues.append(
+            Issue(
+                area="bounded-loop",
+                message=(
+                    "el contrato bounded execution loop esta vacio: "
+                    f"{BOUNDED_LOOP_DOC_PATH}"
+                ),
+            )
+        )
+        return issues
+
+    for marker in BOUNDED_LOOP_DOC_MARKERS:
+        if marker not in doc_text:
+            issues.append(
+                Issue(
+                    area="bounded-loop",
+                    message=(
+                        f"el contrato bounded execution loop carece del marcador "
+                        f"obligatorio {marker!r} en {BOUNDED_LOOP_DOC_PATH}"
+                    ),
+                )
+            )
+
+    for agent_rel in BOUNDED_LOOP_AGENT_PATHS:
+        agent_full = repo_root / agent_rel
+        if not agent_full.is_file():
+            issues.append(
+                Issue(
+                    area="bounded-loop",
+                    message=(
+                        f"el agente autonomo {agent_rel} no existe; no se puede "
+                        "verificar la referencia al contrato bounded execution loop"
+                    ),
+                )
+            )
+            continue
+        agent_text = agent_full.read_text(encoding="utf-8")
+        if BOUNDED_LOOP_AGENT_REFERENCE not in agent_text:
+            issues.append(
+                Issue(
+                    area="bounded-loop",
+                    message=(
+                        f"el agente autonomo {agent_rel} no referencia el contrato "
+                        f"bounded execution loop (falta la frase "
+                        f"{BOUNDED_LOOP_AGENT_REFERENCE!r})"
+                    ),
+                )
+            )
+
+    return issues
+
+
 def verify_all(repo_root: Path) -> list[Issue]:
     """Ejecuta todas las verificaciones y devuelve la lista agregada de issues."""
     issues: list[Issue] = []
@@ -822,6 +963,7 @@ def verify_all(repo_root: Path) -> list[Issue]:
     issues.extend(verify_agent_files(repo_root))
     issues.extend(verify_current_state(repo_root))
     issues.extend(verify_sync(repo_root))
+    issues.extend(verify_bounded_loop_contract(repo_root))
     return issues
 
 
@@ -846,6 +988,9 @@ def _report(issues: list[Issue]) -> int:
             "[ok] headings: docs/current-state.md con 10 encabezados canonicos en orden"
         )
         print("[ok] sync: pares root<->template byte a byte identicos")
+        print(
+            "[ok] bounded-loop: contrato vigente y referenciado por agentes autonomos"
+        )
         print("=" * 72)
         print(f"OK: invariantes verificados ({TOTAL_OK_CHECKS}/{TOTAL_OK_CHECKS})")
         return 0
